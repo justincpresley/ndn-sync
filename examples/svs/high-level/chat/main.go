@@ -26,10 +26,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
-	"time"
 
 	log "github.com/apex/log"
 	svs "github.com/justincpresley/ndn-sync/pkg/svs"
@@ -48,7 +44,6 @@ func main() {
 	logger := log.WithField("module", "main")
 
 	source := flag.String("source", "", "a string of the nodename")
-	interval := flag.Uint("interval", 5000, "update frequency in # of milliseconds")
 	flag.Parse()
 	if *source == "" {
 		logger.Errorf("A source is required to participate.")
@@ -65,64 +60,30 @@ func main() {
 	}
 	defer app.Shutdown()
 
-	var sync *svs.NativeSync
-	callback := func(missing []svs.MissingData) {
-		var (
-			curr uint
-			data []byte
-		)
-		for _, m := range missing {
-			curr = m.LowSeqno
-			for curr <= m.HighSeqno {
-				data = <-sync.FetchData(m.Source, curr)
-				if data != nil {
-					fmt.Println(m.Source + ": " + string(data))
-				} else {
-					fmt.Println("Unfetchable")
-				}
-				curr++
-			}
+	syncPrefix, _ := enc.NameFromStr("/svs")
+	sourceName, _ := enc.NameFromStr(*source)
+	callback := func(source string, seqno uint, data []byte) {
+		if data != nil {
+			fmt.Println(source + ": " + string(data))
+		} else {
+			fmt.Println("Unfetchable")
 		}
 	}
-	syncPrefix, _ := enc.NameFromStr("/svs")
-	nid, _ := enc.NameFromStr(*source)
-	config := &svs.NativeConfig{
-		Source:         nid,
-		GroupPrefix:    syncPrefix,
-		NamingScheme:   svs.HostOrientedNaming,
-		UpdateCallback: callback,
-		StoragePath:    "./" + *source + "_bolt.db",
-	}
-	sync = svs.NewNativeSync(app, config, svs.GetDefaultConstants())
+	sync := svs.NewNativeSync(app, svs.GetBasicNativeConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
 
-	fmt.Println("Activating ...")
 	sync.Listen()
 	sync.Activate(true)
-	fmt.Println("Activated.\n")
+	fmt.Println("Entered the chatroom " + syncPrefix.String() + " as " + sourceName.String() + ".")
 
-	num := 1
-	sigChannel := make(chan os.Signal, 1)
-	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
-	clock := time.NewTimer(time.Duration(*interval) * time.Millisecond)
-	fmt.Println("Starting Count ...")
-
-loopCount:
+	var input string
 	for {
-		select {
-		case <-clock.C:
-			sync.PublishData([]byte(strconv.Itoa(num)))
-			fmt.Println("Published: " + strconv.Itoa(num))
-			clock.Reset(time.Duration(*interval) * time.Millisecond)
-			num++
-		case <-sigChannel:
-			if !clock.Stop() {
-				<-clock.C
-			}
-			logger.Infof("Received signal %+v - exiting.", sigChannel)
-			break loopCount
-		}
+    fmt.Scanln(&input)
+		sync.PublishData([]byte(input))
+		fmt.Print("\033[1A\033[K")
+		fmt.Println(sourceName.String() + ": " + input)
 	}
 
+	// TODO: handle the interupt sequence and do the following
 	err = os.Remove("./" + *source + "_bolt.db")
 	if err != nil {
 		logger.Infof("Unable to remove the database that was created: %+v.", err)

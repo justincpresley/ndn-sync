@@ -37,8 +37,21 @@ type NativeConfig struct {
 	Source         enc.Name
 	GroupPrefix    enc.Name
 	NamingScheme   NamingScheme
-	UpdateCallback func([]MissingData)
 	StoragePath    string
+
+	// define one of the following
+	SimpleCallback func(source string, seqno uint, data []byte)
+	DetailedCallback func(sync *NativeSync, missing []MissingData)
+}
+
+func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint, data []byte)) *NativeConfig {
+	return &NativeConfig{
+		Source:         source,
+		GroupPrefix:    group,
+		NamingScheme:   HostOrientedNaming,
+		StoragePath:    "./" + source.String() + "_bolt.db",
+		SimpleCallback: callback,
+	}
 }
 
 type NativeSync struct {
@@ -54,6 +67,8 @@ type NativeSync struct {
 	datCfg        *ndn.DataConfig
 	dataComp      *enc.Component
 	logger        *log.Entry
+	simpleCall func(source string, seqno uint, data []byte)
+	detailedCall func(sync *NativeSync, missing []MissingData)
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *NativeSync {
@@ -61,17 +76,42 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	syncComp, _ := enc.ComponentFromStr("sync")
 	dataComp, _ := enc.ComponentFromStr("data")
 	syncPrefix := append(config.GroupPrefix, *syncComp)
+	if config.SimpleCallback != nil && config.DetailedCallback != nil {
+		logger.Error("Unable to handle both callbacks being defined in NativeConfig.")
+		return nil
+	} else if config.SimpleCallback == nil && config.DetailedCallback == nil {
+		logger.Errorf("No callback is defined in NativeConfig.")
+		return nil
+	}
+	var s *NativeSync
 	coreConfig := &CoreConfig{
 		Source:         config.Source,
 		SyncPrefix:     syncPrefix,
-		UpdateCallback: config.UpdateCallback,
+		UpdateCallback: func(missing []MissingData){
+			if s.simpleCall == nil {
+				s.detailedCall(s, missing)
+				return
+			}
+			var (
+				curr uint
+				data []byte
+			)
+			for _, m := range missing {
+				curr = m.LowSeqno
+				for curr <= m.HighSeqno {
+					data = <-s.FetchData(m.Source, curr)
+					s.simpleCall(m.Source, curr, data)
+					curr++
+				}
+			}
+		},
 	}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {
 		logger.Errorf("Unable to create storage: %+v", err)
 		return nil
 	}
-	s := &NativeSync{
+	s = &NativeSync{
 		app:           app,
 		core:          NewCore(app, coreConfig, constants),
 		constants:     constants,
@@ -91,6 +131,8 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		},
 		dataComp: dataComp,
 		logger:   logger,
+		simpleCall: config.SimpleCallback,
+		detailedCall: config.DetailedCallback,
 	}
 	return s
 }
