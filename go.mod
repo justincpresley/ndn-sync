@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/apex/log v1.9.0
+	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203
 	github.com/zjkmxy/go-ndn v0.0.0-20220807115049-9dd55e519f9a
 	go.etcd.io/bbolt v1.3.6
 )

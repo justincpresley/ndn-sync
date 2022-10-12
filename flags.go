@@ -23,8 +23,8 @@
 package ndnsync
 
 const (
-	Branch      = "production"
-	Version     = "pre-alpha" // based on unreleased library and currently unreleased
-	License     = "LGPL-2.1 License"
-	Source      = "github.com/justincpresley/ndn-sync"
+	Branch  = "production"
+	Version = "pre-alpha" // based on unreleased library and currently unreleased
+	License = "LGPL-2.1 License"
+	Source  = "github.com/justincpresley/ndn-sync"
 )

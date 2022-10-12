@@ -86,10 +86,10 @@ func main() {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
 	config := &svs.NativeConfig{
-		Source:         nid,
-		GroupPrefix:    syncPrefix,
-		NamingScheme:   svs.HostOrientedNaming,
-		StoragePath:    "./" + *source + "_bolt.db",
+		Source:           nid,
+		GroupPrefix:      syncPrefix,
+		NamingScheme:     svs.HostOrientedNaming,
+		StoragePath:      "./" + *source + "_bolt.db",
 		DetailedCallback: callback,
 	}
 	sync := svs.NewNativeSync(app, config, svs.GetDefaultConstants())

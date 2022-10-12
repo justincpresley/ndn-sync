@@ -27,9 +27,9 @@ type Constants struct {
 	IntervalRandomness      float32 // percentage variance 0.00<=x<=1.00
 	BriefInterval           uint    // (ms) milliseconds
 	BriefIntervalRandomness float32 // percentage variance 0.00<=x<=1.00
-	DataInterestLifeTime    uint // (ms) milliseconds
-	DataPacketFressness     uint // (ms) milliseconds
-	SyncInterestLifeTime    uint // (ms) milliseconds
+	DataInterestLifeTime    uint    // (ms) milliseconds
+	DataPacketFressness     uint    // (ms) milliseconds
+	SyncInterestLifeTime    uint    // (ms) milliseconds
 }
 
 func GetDefaultConstants() *Constants {

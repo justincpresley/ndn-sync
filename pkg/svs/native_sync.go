@@ -34,13 +34,13 @@ import (
 )
 
 type NativeConfig struct {
-	Source         enc.Name
-	GroupPrefix    enc.Name
-	NamingScheme   NamingScheme
-	StoragePath    string
+	Source       enc.Name
+	GroupPrefix  enc.Name
+	NamingScheme NamingScheme
+	StoragePath  string
 
 	// define one of the following
-	SimpleCallback func(source string, seqno uint, data []byte)
+	SimpleCallback   func(source string, seqno uint, data []byte)
 	DetailedCallback func(sync *NativeSync, missing []MissingData)
 }
 
@@ -55,27 +55,30 @@ func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source 
 }
 
 type NativeSync struct {
-	app           *eng.Engine
-	core          *Core
-	constants     *Constants
-	namingScheme  NamingScheme
-	groupPrefix   enc.Name
-	source        enc.Name
-	sourceStr     string
-	storage       Database
-	intCfg        *ndn.InterestConfig
-	datCfg        *ndn.DataConfig
-	dataComp      *enc.Component
-	logger        *log.Entry
-	simpleCall func(source string, seqno uint, data []byte)
+	app          *eng.Engine
+	core         *Core
+	constants    *Constants
+	namingScheme NamingScheme
+	groupPrefix  enc.Name
+	source       enc.Name
+	sourceStr    string
+	storage      Database
+	intCfg       *ndn.InterestConfig
+	datCfg       *ndn.DataConfig
+	dataComp     *enc.Component
+	logger       *log.Entry
+	simpleCall   func(source string, seqno uint, data []byte)
 	detailedCall func(sync *NativeSync, missing []MissingData)
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *NativeSync {
+	var s *NativeSync
+	var callback func(missing []MissingData)
 	logger := log.WithField("module", "svs")
 	syncComp, _ := enc.ComponentFromStr("sync")
 	dataComp, _ := enc.ComponentFromStr("data")
 	syncPrefix := append(config.GroupPrefix, *syncComp)
+
 	if config.SimpleCallback != nil && config.DetailedCallback != nil {
 		logger.Error("Unable to handle both callbacks being defined in NativeConfig.")
 		return nil
@@ -83,15 +86,8 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		logger.Errorf("No callback is defined in NativeConfig.")
 		return nil
 	}
-	var s *NativeSync
-	coreConfig := &CoreConfig{
-		Source:         config.Source,
-		SyncPrefix:     syncPrefix,
-		UpdateCallback: func(missing []MissingData){
-			if s.simpleCall == nil {
-				s.detailedCall(s, missing)
-				return
-			}
+	if config.SimpleCallback != nil {
+		callback = func(missing []MissingData) {
 			var (
 				curr uint
 				data []byte
@@ -104,7 +100,18 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 					curr++
 				}
 			}
-		},
+		}
+	} else {
+		callback = func(missing []MissingData) {
+			s.detailedCall(s, missing)
+			return
+		}
+	}
+
+	coreConfig := &CoreConfig{
+		Source:         config.Source,
+		SyncPrefix:     syncPrefix,
+		UpdateCallback: callback,
 	}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {
@@ -112,14 +119,14 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		return nil
 	}
 	s = &NativeSync{
-		app:           app,
-		core:          NewCore(app, coreConfig, constants),
-		constants:     constants,
-		namingScheme:  config.NamingScheme,
-		groupPrefix:   config.GroupPrefix,
-		source:        config.Source,
-		sourceStr:     config.Source.String(),
-		storage:       storage,
+		app:          app,
+		core:         NewCore(app, coreConfig, constants),
+		constants:    constants,
+		namingScheme: config.NamingScheme,
+		groupPrefix:  config.GroupPrefix,
+		source:       config.Source,
+		sourceStr:    config.Source.String(),
+		storage:      storage,
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -129,9 +136,9 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
 			Freshness:   utl.IdPtr(time.Duration(constants.DataPacketFressness) * time.Millisecond),
 		},
-		dataComp: dataComp,
-		logger:   logger,
-		simpleCall: config.SimpleCallback,
+		dataComp:     dataComp,
+		logger:       logger,
+		simpleCall:   config.SimpleCallback,
 		detailedCall: config.DetailedCallback,
 	}
 	return s
