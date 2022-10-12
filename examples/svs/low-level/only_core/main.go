@@ -88,6 +88,7 @@ func main() {
 	core := svs.NewCore(app, config, svs.GetDefaultConstants())
 	core.Listen()
 	core.Activate(true)
+	defer core.Shutdown()
 	fmt.Println("Activated.\n")
 
 	sigChannel := make(chan os.Signal, 1)

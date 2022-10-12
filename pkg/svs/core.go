@@ -103,6 +103,11 @@ func (c *Core) Activate(immediateStart bool) {
 	c.logger.Info("Core Activated.")
 }
 
+func (c *Core) Shutdown() {
+	c.scheduler.Stop()
+	c.logger.Info("Core Shutdown.")
+}
+
 func (c *Core) SetSeqno(seqno uint) {
 	if seqno <= c.vector.Get(c.sourceStr) {
 		c.logger.Warn("The Core was updated with a lower seqno.")

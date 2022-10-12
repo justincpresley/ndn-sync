@@ -97,6 +97,7 @@ func main() {
 	fmt.Println("Activating ...")
 	sync.Listen()
 	sync.Activate(true)
+	defer sync.Shutdown()
 	fmt.Println("Activated.\n")
 
 	num := 1

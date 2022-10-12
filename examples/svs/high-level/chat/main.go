@@ -76,9 +76,9 @@ func main() {
 		fmt.Print(input)
 	}
 	sync := svs.NewNativeSync(app, svs.GetBasicNativeConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
-
 	sync.Listen()
 	sync.Activate(true)
+	defer sync.Shutdown()
 	fmt.Println("Entered the chatroom " + syncPrefix.String() + " as " + sourceName.String() + ".")
 
 	if err := kyb.Open(); err != nil {

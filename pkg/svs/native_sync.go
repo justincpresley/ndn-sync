@@ -169,6 +169,10 @@ func (s *NativeSync) Activate(immediateStart bool) {
 	s.core.Activate(immediateStart)
 }
 
+func (s *NativeSync) Shutdown() {
+	s.core.Shutdown()
+}
+
 func (s *NativeSync) FetchData(source string, seqno uint) chan []byte {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
