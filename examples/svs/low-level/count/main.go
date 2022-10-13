@@ -68,14 +68,16 @@ func main() {
 	callback := func(sync *svs.NativeSync, missing []svs.MissingData) {
 		var (
 			curr uint
-			data []byte
+			ch   chan svs.FetchResult = make(chan svs.FetchResult)
+			data ndn.Data
 		)
 		for _, m := range missing {
-			curr = m.LowSeqno
-			for curr <= m.HighSeqno {
-				data = <-sync.FetchData(m.Source, curr)
+			curr = m.LowSeqno()
+			for curr <= m.HighSeqno() {
+				sync.FetchData(m.Source(), curr, ch)
+				data = (<-ch).Data()
 				if data != nil {
-					fmt.Println(m.Source + ": " + string(data))
+					fmt.Println(m.Source() + ": " + string(data.Content().Join()))
 				} else {
 					fmt.Println("Unfetchable")
 				}

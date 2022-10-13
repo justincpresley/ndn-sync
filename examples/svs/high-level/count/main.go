@@ -67,9 +67,9 @@ func main() {
 
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	sourceName, _ := enc.NameFromStr(*source)
-	callback := func(source string, seqno uint, data []byte) {
+	callback := func(source string, seqno uint, data ndn.Data) {
 		if data != nil {
-			fmt.Println(source + ": " + string(data))
+			fmt.Println(source + ": " + string(data.Content().Join()))
 		} else {
 			fmt.Println("Unfetchable")
 		}

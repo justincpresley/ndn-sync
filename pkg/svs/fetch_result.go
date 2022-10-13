@@ -22,30 +22,34 @@
 
 package svs
 
-type MissingData interface {
+import (
+	ndn "github.com/zjkmxy/go-ndn/pkg/ndn"
+)
+
+type FetchResult interface {
 	Source() string
-	LowSeqno() uint
-	HighSeqno() uint
+	Seqno() uint
+	Data() ndn.Data
 }
 
-type missingData struct {
-	source    string
-	lowSeqno  uint
-	highSeqno uint
+type fetchResult struct {
+	source string
+	seqno  uint
+	data   ndn.Data
 }
 
-func NewMissingData(source string, low uint, high uint) MissingData {
-	return missingData{source: source, lowSeqno: low, highSeqno: high}
+func NewFetchResult(source string, seqno uint, data ndn.Data) FetchResult {
+	return fetchResult{source: source, seqno: seqno, data: data}
 }
 
-func (md missingData) Source() string {
-	return md.source
+func (fr fetchResult) Source() string {
+	return fr.source
 }
 
-func (md missingData) LowSeqno() uint {
-	return md.lowSeqno
+func (fr fetchResult) Seqno() uint {
+	return fr.seqno
 }
 
-func (md missingData) HighSeqno() uint {
-	return md.highSeqno
+func (fr fetchResult) Data() ndn.Data {
+	return fr.data
 }

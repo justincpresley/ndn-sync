@@ -197,21 +197,17 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 		nid     string
 		isNewer bool
 	)
-	for nid, seqno = range incomingVector.List() {
+	for nid, seqno = range incomingVector.Entries() {
 		temp = c.vector.Get(nid)
 		if temp < seqno {
-			missing = append(missing, MissingData{
-				Source:    nid,
-				LowSeqno:  temp + 1,
-				HighSeqno: seqno,
-			})
+			missing = append(missing, NewMissingData(nid, temp+1, seqno))
 			c.vector.Set(nid, seqno)
 		}
 	}
 	if len(missing) != 0 {
 		go c.updateCallback(missing)
 	}
-	for nid, seqno = range c.vector.List() {
+	for nid, seqno = range c.vector.Entries() {
 		if incomingVector.Get(nid) < seqno {
 			isNewer = true
 			break
@@ -226,7 +222,7 @@ func (c *Core) recordStateVector(incomingVector StateVector) bool {
 	}
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
-	for nid, seqno := range incomingVector.List() {
+	for nid, seqno := range incomingVector.Entries() {
 		if c.record.Get(nid) < seqno {
 			c.record.Set(nid, seqno)
 		}

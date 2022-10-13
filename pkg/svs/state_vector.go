@@ -34,16 +34,16 @@ type StateVector interface {
 	Get(source string) uint
 	String() string
 	Len() int
-	List() map[string]uint
+	Entries() map[string]uint
 	ToComponent() enc.Component
 }
 
-type statevector struct {
-	Entries map[string]uint
+type stateVector struct {
+	entries map[string]uint
 }
 
 func NewStateVector() StateVector {
-	return statevector{Entries: make(map[string]uint)}
+	return stateVector{entries: make(map[string]uint)}
 }
 
 func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
@@ -95,37 +95,37 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 	return ret, nil
 }
 
-func (sv statevector) Set(source string, seqno uint) {
-	sv.Entries[source] = seqno
+func (sv stateVector) Set(source string, seqno uint) {
+	sv.entries[source] = seqno
 }
 
-func (sv statevector) List() map[string]uint {
-	return sv.Entries
+func (sv stateVector) Entries() map[string]uint {
+	return sv.entries
 }
 
-func (sv statevector) Get(source string) uint {
-	return sv.Entries[source]
+func (sv stateVector) Get(source string) uint {
+	return sv.entries[source]
 }
 
-func (sv statevector) String() string {
+func (sv stateVector) String() string {
 	str := ""
-	for key, ele := range sv.Entries {
+	for key, ele := range sv.entries {
 		str += key + ":" + strconv.FormatUint(uint64(ele), 10) + " "
 	}
 	return str // has an extra space
 }
 
-func (sv statevector) Len() int {
-	return len(sv.Entries)
+func (sv stateVector) Len() int {
+	return len(sv.entries)
 }
 
-func (sv statevector) ToComponent() enc.Component {
+func (sv stateVector) ToComponent() enc.Component {
 	var (
-		length uint = 2 * uint(len(sv.Entries))
+		length uint = 2 * uint(len(sv.entries))
 		pos    uint
 	)
 	// component value space
-	for key, ele := range sv.Entries {
+	for key, ele := range sv.entries {
 		length += get_uint_byte_size(uint(len(key)))
 		length += uint(len(key))
 		length += get_uint_byte_size(get_uint_byte_size(ele))
@@ -137,7 +137,7 @@ func (sv statevector) ToComponent() enc.Component {
 		Val: make([]byte, length),
 	}
 	buf := comp.Val
-	for key, ele := range sv.Entries {
+	for key, ele := range sv.entries {
 		pos += write_uint(TlvTypeEntrySource, buf, pos)
 		pos += write_uint(uint(len(key)), buf, pos)
 		copy(buf[pos:], key)

@@ -38,13 +38,13 @@ type NativeConfig struct {
 	GroupPrefix  enc.Name
 	NamingScheme NamingScheme
 	StoragePath  string
-
-	// define one of the following
-	SimpleCallback   func(source string, seqno uint, data []byte)
+	// high-level only
+	SimpleCallback func(source string, seqno uint, data ndn.Data)
+	// low-level only
 	DetailedCallback func(sync *NativeSync, missing []MissingData)
 }
 
-func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint, data []byte)) *NativeConfig {
+func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint, data ndn.Data)) *NativeConfig {
 	return &NativeConfig{
 		Source:         source,
 		GroupPrefix:    group,
@@ -67,7 +67,7 @@ type NativeSync struct {
 	datCfg       *ndn.DataConfig
 	dataComp     *enc.Component
 	logger       *log.Entry
-	simpleCall   func(source string, seqno uint, data []byte)
+	simpleCall   func(source string, seqno uint, data ndn.Data)
 	detailedCall func(sync *NativeSync, missing []MissingData)
 }
 
@@ -90,13 +90,13 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		callback = func(missing []MissingData) {
 			var (
 				curr uint
-				data []byte
+				ch   chan FetchResult = make(chan FetchResult)
 			)
 			for _, m := range missing {
-				curr = m.LowSeqno
-				for curr <= m.HighSeqno {
-					data = <-s.FetchData(m.Source, curr)
-					s.simpleCall(m.Source, curr, data)
+				curr = m.LowSeqno()
+				for curr <= m.HighSeqno() {
+					s.FetchData(m.Source(), curr, ch)
+					s.simpleCall(m.Source(), curr, (<-ch).Data())
 					curr++
 				}
 			}
@@ -173,26 +173,24 @@ func (s *NativeSync) Shutdown() {
 	s.core.Shutdown()
 }
 
-func (s *NativeSync) FetchData(source string, seqno uint) chan []byte {
+func (s *NativeSync) FetchData(source string, seqno uint, ch chan FetchResult) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
-		return nil
+		return
 	}
-	ch := make(chan []byte)
 	err = s.app.Express(finalName, s.intCfg, wire,
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
-			var content []byte
 			if result == ndn.InterestResultData {
-				content = data.Content().Join()
+				ch <- NewFetchResult(source, seqno, data)
+			} else {
+				ch <- NewFetchResult(source, seqno, nil)
 			}
-			ch <- content
 		})
 	if err != nil {
 		s.logger.Errorf("Unable to send Interest: %+v", err)
-		return nil
+		return
 	}
-	return ch
 }
 
 func (s *NativeSync) PublishData(content []byte) {
