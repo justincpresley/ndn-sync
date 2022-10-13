@@ -83,8 +83,6 @@ func (s *Scheduler) target(executeNow bool) {
 				default:
 				}
 			}
-			close(s.quit)
-			close(s.cycle)
 			return
 		}
 	}
