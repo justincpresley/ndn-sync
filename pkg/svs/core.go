@@ -61,6 +61,8 @@ type Core struct {
 	intCfg         *ndn.InterestConfig
 	vectorMutex    sync.Mutex
 	recordMutex    sync.Mutex
+	isListening    bool
+	isActive       bool
 }
 
 func NewCore(app *eng.Engine, config *CoreConfig, constants *Constants) *Core {
@@ -95,16 +97,24 @@ func (c *Core) Listen() {
 		c.logger.Errorf("Unable to register route: %+v", err)
 		return
 	}
+	c.isListening = true
 	c.logger.Info("Sync-side Registered and Handled.")
 }
 
 func (c *Core) Activate(immediateStart bool) {
 	c.scheduler.Start(immediateStart)
+	c.isActive = true
 	c.logger.Info("Core Activated.")
 }
 
 func (c *Core) Shutdown() {
-	c.scheduler.Stop()
+	if c.isActive {
+		c.scheduler.Stop()
+	}
+	if c.isListening {
+		c.app.DetachHandler(c.syncPrefix)
+		c.app.UnregisterRoute(c.syncPrefix)
+	}
 	c.logger.Info("Core Shutdown.")
 }
 

@@ -74,7 +74,7 @@ func main() {
 		for _, m := range missing {
 			curr = m.LowSeqno()
 			for curr <= m.HighSeqno() {
-				sync.FetchData(m.Source(), curr, ch)
+				sync.Fetch(m.Source(), curr, ch)
 				data = (<-ch).Data()
 				if data != nil {
 					fmt.Println(m.Source() + ": " + string(data.Content().Join()))
@@ -112,7 +112,7 @@ loopCount:
 	for {
 		select {
 		case <-clock.C:
-			sync.PublishData([]byte(strconv.Itoa(num)))
+			sync.Publish([]byte(strconv.Itoa(num)))
 			fmt.Println("Published: " + strconv.Itoa(num))
 			clock.Reset(time.Duration(*interval) * time.Millisecond)
 			num++

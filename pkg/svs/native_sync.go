@@ -95,7 +95,7 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 			for _, m := range missing {
 				curr = m.LowSeqno()
 				for curr <= m.HighSeqno() {
-					s.FetchData(m.Source(), curr, ch)
+					s.Fetch(m.Source(), curr, ch)
 					s.simpleCall(m.Source(), curr, (<-ch).Data())
 					curr++
 				}
@@ -173,7 +173,7 @@ func (s *NativeSync) Shutdown() {
 	s.core.Shutdown()
 }
 
-func (s *NativeSync) FetchData(source string, seqno uint, ch chan FetchResult) {
+func (s *NativeSync) Fetch(source string, seqno uint, ch chan FetchResult) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
@@ -193,7 +193,7 @@ func (s *NativeSync) FetchData(source string, seqno uint, ch chan FetchResult) {
 	}
 }
 
-func (s *NativeSync) PublishData(content []byte) {
+func (s *NativeSync) Publish(content []byte) {
 	seqno := s.core.GetSeqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
