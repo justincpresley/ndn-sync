@@ -123,8 +123,9 @@ func (c *Core) SetSeqno(seqno uint) {
 		c.logger.Warn("The Core was updated with a lower seqno.")
 		return
 	}
-	// WARNING: this might cause two sync interests to be sent.
+	c.vectorMutex.Lock()
 	c.vector.Set(c.sourceStr, seqno)
+	c.vectorMutex.Unlock()
 	c.scheduler.Skip()
 }
 
@@ -218,7 +219,7 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 		go c.updateCallback(missing)
 	}
 	for nid, seqno = range c.vector.Entries() {
-		if incomingVector.Get(nid) < seqno {
+		if nid != c.sourceStr && incomingVector.Get(nid) < seqno {
 			isNewer = true
 			break
 		}

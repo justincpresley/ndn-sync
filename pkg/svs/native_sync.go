@@ -69,7 +69,7 @@ type NativeSync struct {
 	dataCall     func(source string, seqno uint, data ndn.Data)
 	updateCall   func(sync *NativeSync, missing []MissingData)
 	fetchQueue   chan FetchItem
-	numFetches   uint
+	numFetches   uint // TODO: likely a data race here
 	isListening  bool
 }
 
