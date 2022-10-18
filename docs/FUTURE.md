@@ -4,9 +4,9 @@
 
 As a developer, I am focusing my efforts on the pressing next-step updates.
 
- - **svs~Fetching goes BRRRRR**: Develop an easy-to-use, asynchronous alternative instead of fetching data sequentially
  - **svs~Latest Entries**: Tackle scability of the original SVS specification
  - **svs~SharedSync**: Provide another type of sync that caches other people's data
+ - **svs~RetryAmount**: Implement Retries, Be able to set DataInterestRetryAmount within Config.
 
 ## Areas to Support as a Contributor
 

@@ -38,19 +38,18 @@ type NativeConfig struct {
 	GroupPrefix  enc.Name
 	NamingScheme NamingScheme
 	StoragePath  string
-	// high-level only
-	SimpleCallback func(source string, seqno uint, data ndn.Data)
+	DataCallback func(source string, seqno uint, data ndn.Data)
 	// low-level only
-	DetailedCallback func(sync *NativeSync, missing []MissingData)
+	UpdateCallback func(sync *NativeSync, missing []MissingData)
 }
 
 func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint, data ndn.Data)) *NativeConfig {
 	return &NativeConfig{
-		Source:         source,
-		GroupPrefix:    group,
-		NamingScheme:   HostOrientedNaming,
-		StoragePath:    "./" + source.String() + "_bolt.db",
-		SimpleCallback: callback,
+		Source:       source,
+		GroupPrefix:  group,
+		NamingScheme: HostOrientedNaming,
+		StoragePath:  "./" + source.String() + "_bolt.db",
+		DataCallback: callback,
 	}
 }
 
@@ -67,8 +66,11 @@ type NativeSync struct {
 	datCfg       *ndn.DataConfig
 	dataComp     *enc.Component
 	logger       *log.Entry
-	simpleCall   func(source string, seqno uint, data ndn.Data)
-	detailedCall func(sync *NativeSync, missing []MissingData)
+	dataCall     func(source string, seqno uint, data ndn.Data)
+	updateCall   func(sync *NativeSync, missing []MissingData)
+	fetchQueue   chan FetchItem
+	numFetches   uint
+	isListening  bool
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *NativeSync {
@@ -79,31 +81,25 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	dataComp, _ := enc.ComponentFromStr("data")
 	syncPrefix := append(config.GroupPrefix, *syncComp)
 
-	if config.SimpleCallback != nil && config.DetailedCallback != nil {
-		logger.Error("Unable to handle both callbacks being defined in NativeConfig.")
-		return nil
-	} else if config.SimpleCallback == nil && config.DetailedCallback == nil {
-		logger.Errorf("No callback is defined in NativeConfig.")
+	if config.DataCallback == nil {
+		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
 		return nil
 	}
-	if config.SimpleCallback != nil {
+	if config.UpdateCallback == nil {
 		callback = func(missing []MissingData) {
-			var (
-				curr uint
-				ch   chan FetchResult = make(chan FetchResult)
-			)
+			var curr uint
 			for _, m := range missing {
 				curr = m.LowSeqno()
 				for curr <= m.HighSeqno() {
-					s.Fetch(m.Source(), curr, ch)
-					s.simpleCall(m.Source(), curr, (<-ch).Data())
+					s.QueueFetch(m.Source(), curr)
 					curr++
 				}
 			}
+			s.ProcessQueue()
 		}
 	} else {
 		callback = func(missing []MissingData) {
-			s.detailedCall(s, missing)
+			s.updateCall(s, missing)
 			return
 		}
 	}
@@ -136,10 +132,11 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
 			Freshness:   utl.IdPtr(time.Duration(constants.DataPacketFressness) * time.Millisecond),
 		},
-		dataComp:     dataComp,
-		logger:       logger,
-		simpleCall:   config.SimpleCallback,
-		detailedCall: config.DetailedCallback,
+		dataComp:   dataComp,
+		logger:     logger,
+		dataCall:   config.DataCallback,
+		updateCall: config.UpdateCallback,
+		fetchQueue: make(chan FetchItem, 20), // TODO: what number to initalize here
 	}
 	return s
 }
@@ -161,35 +158,57 @@ func (s *NativeSync) Listen() {
 		s.logger.Errorf("Unable to register route: %+v", err)
 		return
 	}
+	s.isListening = true
 	s.logger.Info("Data-side Registered and Handled.")
 	s.core.Listen()
 }
 
 func (s *NativeSync) Activate(immediateStart bool) {
 	s.core.Activate(immediateStart)
+	s.logger.Info("Sync Activated.")
 }
 
 func (s *NativeSync) Shutdown() {
 	s.core.Shutdown()
+	if s.isListening {
+		dataPrefix := append(s.groupPrefix, *s.dataComp)
+		if s.namingScheme == GroupOrientedNaming {
+			dataPrefix = append(dataPrefix, s.source...)
+		} else {
+			dataPrefix = append(s.source, dataPrefix...)
+		}
+		s.app.DetachHandler(dataPrefix)
+		s.app.UnregisterRoute(dataPrefix)
+	}
+	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *NativeSync) Fetch(source string, seqno uint, ch chan FetchResult) {
-	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
-	if err != nil {
-		s.logger.Errorf("Unable to make Interest: %+v", err)
-		return
-	}
-	err = s.app.Express(finalName, s.intCfg, wire,
-		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
-			if result == ndn.InterestResultData {
-				ch <- NewFetchResult(source, seqno, data)
-			} else {
-				ch <- NewFetchResult(source, seqno, nil)
+func (s *NativeSync) QueueFetch(source string, seqno uint) {
+	s.fetchQueue <- NewFetchItem(source, seqno)
+}
+
+func (s *NativeSync) ProcessQueue() {
+	var i FetchItem
+	if s.constants.MaxConcurrentDataInterests != 0 {
+		for s.numFetches < s.constants.MaxConcurrentDataInterests {
+			select {
+			case i = <-s.fetchQueue:
+				s.sendInterest(i.Source(), i.Seqno())
+				s.numFetches++
+			default:
+				return
 			}
-		})
-	if err != nil {
-		s.logger.Errorf("Unable to send Interest: %+v", err)
-		return
+		}
+	} else {
+		for {
+			select {
+			case i = <-s.fetchQueue:
+				s.sendInterest(i.Source(), i.Seqno())
+				s.numFetches++
+			default:
+				return
+			}
+		}
 	}
 }
 
@@ -221,6 +240,29 @@ func (s *NativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, s
 
 func (s *NativeSync) GetCore() *Core {
 	return s.core
+}
+
+func (s *NativeSync) sendInterest(source string, seqno uint) {
+	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
+	if err != nil {
+		s.logger.Errorf("Unable to make Interest: %+v", err)
+		return
+	}
+	err = s.app.Express(finalName, s.intCfg, wire,
+		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
+			if result == ndn.InterestResultData {
+				s.dataCall(source, seqno, data)
+			} else {
+				// TODO: implement retry amount
+				s.dataCall(source, seqno, nil)
+			}
+			s.numFetches--
+			s.ProcessQueue()
+		})
+	if err != nil {
+		s.logger.Errorf("Unable to send Interest: %+v", err)
+		return
+	}
 }
 
 func (s *NativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {

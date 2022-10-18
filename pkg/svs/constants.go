@@ -23,23 +23,25 @@
 package svs
 
 type Constants struct {
-	Interval                uint    // (ms) milliseconds
-	IntervalRandomness      float32 // percentage variance 0.00<=x<=1.00
-	BriefInterval           uint    // (ms) milliseconds
-	BriefIntervalRandomness float32 // percentage variance 0.00<=x<=1.00
-	DataInterestLifeTime    uint    // (ms) milliseconds
-	DataPacketFressness     uint    // (ms) milliseconds
-	SyncInterestLifeTime    uint    // (ms) milliseconds
+	Interval                   uint    // (ms) milliseconds
+	IntervalRandomness         float32 // percentage variance 0.00<=x<=1.00
+	BriefInterval              uint    // (ms) milliseconds
+	BriefIntervalRandomness    float32 // percentage variance 0.00<=x<=1.00
+	DataInterestLifeTime       uint    // (ms) milliseconds
+	DataPacketFressness        uint    // (ms) milliseconds
+	SyncInterestLifeTime       uint    // (ms) milliseconds
+	MaxConcurrentDataInterests uint    // 0 = inf
 }
 
 func GetDefaultConstants() *Constants {
 	return &Constants{
-		Interval:                30000,
-		IntervalRandomness:      0.10,
-		BriefInterval:           200,
-		BriefIntervalRandomness: 0.50,
-		DataInterestLifeTime:    2000,
-		DataPacketFressness:     5000,
-		SyncInterestLifeTime:    1000,
+		Interval:                   30000,
+		IntervalRandomness:         0.10,
+		BriefInterval:              200,
+		BriefIntervalRandomness:    0.50,
+		DataInterestLifeTime:       2000,
+		DataPacketFressness:        5000,
+		SyncInterestLifeTime:       1000,
+		MaxConcurrentDataInterests: 10,
 	}
 }

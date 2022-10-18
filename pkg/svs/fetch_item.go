@@ -22,34 +22,24 @@
 
 package svs
 
-import (
-	ndn "github.com/zjkmxy/go-ndn/pkg/ndn"
-)
-
-type FetchResult interface {
+type FetchItem interface {
 	Source() string
 	Seqno() uint
-	Data() ndn.Data
 }
 
-type fetchResult struct {
+type fetchItem struct {
 	source string
 	seqno  uint
-	data   ndn.Data
 }
 
-func NewFetchResult(source string, seqno uint, data ndn.Data) FetchResult {
-	return fetchResult{source: source, seqno: seqno, data: data}
+func NewFetchItem(source string, seqno uint) FetchItem {
+	return fetchItem{source: source, seqno: seqno}
 }
 
-func (fr fetchResult) Source() string {
-	return fr.source
+func (fi fetchItem) Source() string {
+	return fi.source
 }
 
-func (fr fetchResult) Seqno() uint {
-	return fr.seqno
-}
-
-func (fr fetchResult) Data() ndn.Data {
-	return fr.data
+func (fi fetchItem) Seqno() uint {
+	return fi.seqno
 }

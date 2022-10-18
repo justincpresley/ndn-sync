@@ -65,34 +65,35 @@ func main() {
 	}
 	defer app.Shutdown()
 
-	callback := func(sync *svs.NativeSync, missing []svs.MissingData) {
-		var (
-			curr uint
-			ch   chan svs.FetchResult = make(chan svs.FetchResult)
-			data ndn.Data
-		)
+	dataCall := func(source string, seqno uint, data ndn.Data) {
+		fmt.Print("\n\033[1F\033[K")
+		if data != nil {
+			fmt.Println(source + ": " + string(data.Content().Join()))
+		} else {
+			fmt.Println("Unfetchable")
+		}
+		fmt.Print(input)
+	}
+	updateCall = func(sync *svs.NativeSync, missing []svs.MissingData) {
+		var curr uint
 		for _, m := range missing {
 			curr = m.LowSeqno()
 			for curr <= m.HighSeqno() {
-				sync.Fetch(m.Source(), curr, ch)
-				data = (<-ch).Data()
-				if data != nil {
-					fmt.Println(m.Source() + ": " + string(data.Content().Join()))
-				} else {
-					fmt.Println("Unfetchable")
-				}
+				sync.QueueFetch(m.Source(), curr)
 				curr++
 			}
 		}
+		sync.ProcessQueue()
 	}
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
 	config := &svs.NativeConfig{
-		Source:           nid,
-		GroupPrefix:      syncPrefix,
-		NamingScheme:     svs.HostOrientedNaming,
-		StoragePath:      "./" + *source + "_bolt.db",
-		DetailedCallback: callback,
+		Source:         nid,
+		GroupPrefix:    syncPrefix,
+		NamingScheme:   svs.HostOrientedNaming,
+		StoragePath:    "./" + *source + "_bolt.db",
+		DataCallback:   dataCall,
+		UpdateCallback: updateCall,
 	}
 	sync := svs.NewNativeSync(app, config, svs.GetDefaultConstants())
 
