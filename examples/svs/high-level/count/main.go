@@ -92,7 +92,7 @@ loopCount:
 	for {
 		select {
 		case <-clock.C:
-			sync.Publish([]byte(strconv.Itoa(num)))
+			sync.PublishData([]byte(strconv.Itoa(num)))
 			fmt.Println("Published: " + strconv.Itoa(num))
 			clock.Reset(time.Duration(*interval) * time.Millisecond)
 			num++

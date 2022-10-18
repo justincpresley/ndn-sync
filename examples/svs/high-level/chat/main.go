@@ -100,7 +100,7 @@ InputLoop:
 		case kyb.KeyEnter:
 			fmt.Print("\n\033[1F\033[K")
 			if strings.TrimSpace(input) != "" {
-				sync.Publish([]byte(input))
+				sync.PublishData([]byte(input))
 				fmt.Println(sourceName.String() + ": " + input)
 			}
 			input = ""

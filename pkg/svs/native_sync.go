@@ -91,11 +91,10 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 			for _, m := range missing {
 				curr = m.LowSeqno()
 				for curr <= m.HighSeqno() {
-					s.QueueFetch(m.Source(), curr)
+					s.FetchData(m.Source(), curr)
 					curr++
 				}
 			}
-			s.ProcessQueue()
 		}
 	} else {
 		callback = func(missing []MissingData) {
@@ -183,36 +182,16 @@ func (s *NativeSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *NativeSync) QueueFetch(source string, seqno uint) {
+func (s *NativeSync) FetchData(source string, seqno uint) {
+	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
+		s.sendInterest(source, seqno)
+		s.numFetches++
+		return
+	}
 	s.fetchQueue <- NewFetchItem(source, seqno)
 }
 
-func (s *NativeSync) ProcessQueue() {
-	var i FetchItem
-	if s.constants.MaxConcurrentDataInterests != 0 {
-		for s.numFetches < s.constants.MaxConcurrentDataInterests {
-			select {
-			case i = <-s.fetchQueue:
-				s.sendInterest(i.Source(), i.Seqno())
-				s.numFetches++
-			default:
-				return
-			}
-		}
-	} else {
-		for {
-			select {
-			case i = <-s.fetchQueue:
-				s.sendInterest(i.Source(), i.Seqno())
-				s.numFetches++
-			default:
-				return
-			}
-		}
-	}
-}
-
-func (s *NativeSync) Publish(content []byte) {
+func (s *NativeSync) PublishData(content []byte) {
 	seqno := s.core.GetSeqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
@@ -257,11 +236,23 @@ func (s *NativeSync) sendInterest(source string, seqno uint) {
 				s.dataCall(source, seqno, nil)
 			}
 			s.numFetches--
-			s.ProcessQueue()
+			s.processQueue()
 		})
 	if err != nil {
 		s.logger.Errorf("Unable to send Interest: %+v", err)
 		return
+	}
+}
+
+func (s *NativeSync) processQueue() {
+	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
+		select {
+		case i := <-s.fetchQueue:
+			s.sendInterest(i.Source(), i.Seqno())
+			s.numFetches++
+		default:
+			return
+		}
 	}
 }
 

@@ -72,18 +72,16 @@ func main() {
 		} else {
 			fmt.Println("Unfetchable")
 		}
-		fmt.Print(input)
 	}
-	updateCall = func(sync *svs.NativeSync, missing []svs.MissingData) {
+	updateCall := func(sync *svs.NativeSync, missing []svs.MissingData) {
 		var curr uint
 		for _, m := range missing {
 			curr = m.LowSeqno()
 			for curr <= m.HighSeqno() {
-				sync.QueueFetch(m.Source(), curr)
+				sync.FetchData(m.Source(), curr)
 				curr++
 			}
 		}
-		sync.ProcessQueue()
 	}
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
@@ -113,7 +111,7 @@ loopCount:
 	for {
 		select {
 		case <-clock.C:
-			sync.Publish([]byte(strconv.Itoa(num)))
+			sync.PublishData([]byte(strconv.Itoa(num)))
 			fmt.Println("Published: " + strconv.Itoa(num))
 			clock.Reset(time.Duration(*interval) * time.Millisecond)
 			num++
