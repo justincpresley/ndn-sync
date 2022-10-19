@@ -26,24 +26,26 @@ import (
 	"errors"
 	"strconv"
 
+	om "github.com/justincpresley/ndn-sync/internal/orderedmap"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 type StateVector interface {
-	Set(source string, seqno uint)
+	Set(source string, seqno uint, oldData bool)
 	Get(source string) uint
 	String() string
 	Len() int
-	Entries() map[string]uint
+	Total() uint
+	Entries() *om.OrderedMap[string, uint]
 	ToComponent() enc.Component
 }
 
 type stateVector struct {
-	entries map[string]uint
+	entries *om.OrderedMap[string, uint]
 }
 
 func NewStateVector() StateVector {
-	return stateVector{entries: make(map[string]uint)}
+	return stateVector{entries: om.New[string, uint]()}
 }
 
 func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
@@ -90,46 +92,59 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		seqno, _ = parse_uint(buf, pos)
 		pos += length
 		// add the component
-		ret.Set(source, seqno)
+		ret.Set(source, seqno, true)
 	}
 	return ret, nil
 }
 
-func (sv stateVector) Set(source string, seqno uint) {
-	sv.entries[source] = seqno
-}
-
-func (sv stateVector) Entries() map[string]uint {
-	return sv.entries
+func (sv stateVector) Set(source string, seqno uint, old bool) {
+	sv.entries.Set(source, seqno, old)
 }
 
 func (sv stateVector) Get(source string) uint {
-	return sv.entries[source]
+	if val, present := sv.entries.Get(source); present {
+		return val
+	} else {
+		return 0
+	}
 }
 
 func (sv stateVector) String() string {
 	str := ""
-	for key, ele := range sv.entries {
-		str += key + ":" + strconv.FormatUint(uint64(ele), 10) + " "
+	for pair := sv.entries.Oldest(); pair != nil; pair = pair.Next() {
+		str += pair.Key + ":" + strconv.FormatUint(uint64(pair.Value), 10) + " "
 	}
 	return str // has an extra space
 }
 
 func (sv stateVector) Len() int {
-	return len(sv.entries)
+	return sv.entries.Len()
+}
+
+func (sv stateVector) Total() uint {
+	total := uint(0)
+	for pair := sv.entries.Oldest(); pair != nil; pair = pair.Next() {
+		total += pair.Value
+	}
+	return total
+}
+
+func (sv stateVector) Entries() *om.OrderedMap[string, uint] {
+	return sv.entries
 }
 
 func (sv stateVector) ToComponent() enc.Component {
 	var (
-		length uint = 2 * uint(len(sv.entries))
+		length uint = 2 * uint(sv.entries.Len())
+		pair   *om.Pair[string, uint]
 		pos    uint
 	)
 	// component value space
-	for key, ele := range sv.entries {
-		length += get_uint_byte_size(uint(len(key)))
-		length += uint(len(key))
-		length += get_uint_byte_size(get_uint_byte_size(ele))
-		length += get_uint_byte_size(ele)
+	for pair = sv.entries.Oldest(); pair != nil; pair = pair.Next() {
+		length += get_uint_byte_size(uint(len(pair.Key)))
+		length += uint(len(pair.Key))
+		length += get_uint_byte_size(get_uint_byte_size(pair.Value))
+		length += get_uint_byte_size(pair.Value)
 	}
 	// make and fill the component
 	comp := enc.Component{
@@ -137,14 +152,14 @@ func (sv stateVector) ToComponent() enc.Component {
 		Val: make([]byte, length),
 	}
 	buf := comp.Val
-	for key, ele := range sv.entries {
+	for pair = sv.entries.Oldest(); pair != nil; pair = pair.Next() {
 		pos += write_uint(TlvTypeEntrySource, buf, pos)
-		pos += write_uint(uint(len(key)), buf, pos)
-		copy(buf[pos:], key)
-		pos += uint(len(key))
+		pos += write_uint(uint(len(pair.Key)), buf, pos)
+		copy(buf[pos:], pair.Key)
+		pos += uint(len(pair.Key))
 		pos += write_uint(TlvTypeEntrySeqno, buf, pos)
-		pos += write_uint(get_uint_byte_size(ele), buf, pos)
-		pos += write_uint(ele, buf, pos)
+		pos += write_uint(get_uint_byte_size(pair.Value), buf, pos)
+		pos += write_uint(pair.Value, buf, pos)
 	}
 	return comp
 }

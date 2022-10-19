@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+### Added
+- StateVectors are now ordered.
+
+### Changed
+- Stopped calling `go` on every updateCallback within the Core of SVS.
 
 ## [v0.0.0-alpha.1] - 2022-10-18
 ### Added

@@ -124,7 +124,7 @@ func (c *Core) SetSeqno(seqno uint) {
 		return
 	}
 	c.vectorMutex.Lock()
-	c.vector.Set(c.sourceStr, seqno)
+	c.vector.Set(c.sourceStr, seqno, false)
 	c.vectorMutex.Unlock()
 	c.scheduler.Skip()
 }
@@ -203,26 +203,23 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 	defer c.vectorMutex.Unlock()
 	var (
 		missing []MissingData = make([]MissingData, 0)
-		seqno   uint
 		temp    uint
-		nid     string
 		isNewer bool
 	)
-	for nid, seqno = range incomingVector.Entries() {
-		temp = c.vector.Get(nid)
-		if temp < seqno {
-			missing = append(missing, NewMissingData(nid, temp+1, seqno))
-			c.vector.Set(nid, seqno)
+	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {
+		temp = c.vector.Get(pair.Key)
+		if temp < pair.Value {
+			missing = append(missing, NewMissingData(pair.Key, temp+1, pair.Value))
+			c.vector.Set(pair.Key, pair.Value, false)
+		} else if pair.Key != c.sourceStr && temp > pair.Value {
+			isNewer = true
 		}
+	}
+	if incomingVector.Len() < c.vector.Len() {
+		isNewer = true
 	}
 	if len(missing) != 0 {
-		go c.updateCallback(missing)
-	}
-	for nid, seqno = range c.vector.Entries() {
-		if nid != c.sourceStr && incomingVector.Get(nid) < seqno {
-			isNewer = true
-			break
-		}
+		c.updateCallback(missing)
 	}
 	return isNewer
 }
@@ -233,9 +230,9 @@ func (c *Core) recordStateVector(incomingVector StateVector) bool {
 	}
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
-	for nid, seqno := range incomingVector.Entries() {
-		if c.record.Get(nid) < seqno {
-			c.record.Set(nid, seqno)
+	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {
+		if c.record.Get(pair.Key) < pair.Value {
+			c.record.Set(pair.Key, pair.Value, false)
 		}
 	}
 	return true
