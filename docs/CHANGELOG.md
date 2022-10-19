@@ -7,7 +7,7 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 
 ## [Unreleased]
 
-## [0.0.0] - 2022-10-18
+## [v0.0.0-alpha1] - 2022-10-18
 ### Added
 - SVS Implementation according to Specification with a built-in Fetcher
 - SVS Examples: low-level (only-core, count) and high-level (count, chat)
@@ -15,5 +15,5 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ## Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0...HEAD
-[0.0.0]: https://github.com/justincpresley/ndn-sync/releases/tag/v0.0.0
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha1...HEAD
+[v0.0.0-alpha1]: https://github.com/justincpresley/ndn-sync/releases/tag/v0.0.0-alpha1
