@@ -7,10 +7,16 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 
 ## [Unreleased]
 ### Added
-- StateVectors are now ordered.
+- SVS: StateVectors are now ordered by latest entries.
+- SVS Scheduler now properly adds randomness to values.
+- Users of SVS can now define the initial fetcher queue length.
 
 ### Changed
-- Stopped calling `go` on every updateCallback within the Core of SVS.
+- SVS: Stop calling `go` on every updateCallback within Core.
+- SVS Fetcher now uses a channel of functions rather than a channel of structs.
+
+### Removed
+- SVS FetchItem is removed due to not being used.
 
 ## [v0.0.0-alpha.1] - 2022-10-18
 ### Added
