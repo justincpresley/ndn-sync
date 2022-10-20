@@ -23,8 +23,13 @@
 package svs
 
 import (
+	"math/rand"
 	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 type Scheduler struct {
 	function   func()
@@ -113,5 +118,8 @@ func (s *Scheduler) TimeLeft() time.Duration {
 }
 
 func AddRandomness(value uint, randomness float32) uint {
-	return value // TODO: randomize
+	i := uint(float32(value) * randomness)
+	min := int(value - i)
+	max := int(value + i)
+	return uint(rand.Intn(max-min) + min)
 }

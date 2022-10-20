@@ -203,26 +203,23 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 	defer c.vectorMutex.Unlock()
 	var (
 		missing []MissingData = make([]MissingData, 0)
-		seqno   uint
 		temp    uint
-		nid     string
 		isNewer bool
 	)
-	for nid, seqno = range incomingVector.Entries() {
+	for nid, seqno := range incomingVector.Entries() {
 		temp = c.vector.Get(nid)
 		if temp < seqno {
 			missing = append(missing, NewMissingData(nid, temp+1, seqno))
 			c.vector.Set(nid, seqno)
+		} else if nid != c.sourceStr && temp > seqno {
+			isNewer = true
 		}
+	}
+	if incomingVector.Len() < c.vector.Len() {
+		isNewer = true
 	}
 	if len(missing) != 0 {
-		go c.updateCallback(missing)
-	}
-	for nid, seqno = range c.vector.Entries() {
-		if nid != c.sourceStr && incomingVector.Get(nid) < seqno {
-			isNewer = true
-			break
-		}
+		c.updateCallback(missing)
 	}
 	return isNewer
 }

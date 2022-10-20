@@ -68,7 +68,7 @@ type NativeSync struct {
 	logger       *log.Entry
 	dataCall     func(source string, seqno uint, data ndn.Data)
 	updateCall   func(sync *NativeSync, missing []MissingData)
-	fetchQueue   chan FetchItem
+	fetchQueue   chan func() (string, uint)
 	numFetches   uint // TODO: likely a data race here
 	isListening  bool
 }
@@ -135,7 +135,7 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
-		fetchQueue: make(chan FetchItem, 20), // TODO: what number to initalize here
+		fetchQueue: make(chan func() (string, uint), constants.InitialFetchQueueLength),
 	}
 	return s
 }
@@ -188,7 +188,7 @@ func (s *NativeSync) FetchData(source string, seqno uint) {
 		s.numFetches++
 		return
 	}
-	s.fetchQueue <- NewFetchItem(source, seqno)
+	s.fetchQueue <- func() (string, uint) { return source, seqno }
 }
 
 func (s *NativeSync) PublishData(content []byte) {
@@ -247,8 +247,8 @@ func (s *NativeSync) sendInterest(source string, seqno uint) {
 func (s *NativeSync) processQueue() {
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		select {
-		case i := <-s.fetchQueue:
-			s.sendInterest(i.Source(), i.Seqno())
+		case f := <-s.fetchQueue:
+			s.sendInterest(f())
 			s.numFetches++
 		default:
 			return
