@@ -89,7 +89,7 @@ func main() {
 	core.Listen()
 	core.Activate(true)
 	defer core.Shutdown()
-	fmt.Println("Activated.\n")
+	fmt.Printf("Activated.\n\n")
 
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)

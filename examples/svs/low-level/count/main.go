@@ -99,7 +99,7 @@ func main() {
 	sync.Listen()
 	sync.Activate(true)
 	defer sync.Shutdown()
-	fmt.Println("Activated.\n")
+	fmt.Printf("Activated.\n\n")
 
 	num := 1
 	sigChannel := make(chan os.Signal, 1)

@@ -23,8 +23,8 @@
 package svs
 
 import (
-	"time"
 	"math/rand"
+	"time"
 )
 
 func init() {
