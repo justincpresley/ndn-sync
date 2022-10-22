@@ -4,7 +4,6 @@
 
 As a developer, I am focusing my efforts on the pressing next-step updates.
 
- - **svs~SharedSync**: Provide another type of sync that caches other people's data.
  - **svs~EncodingSV**: Change StateVector Encoding to the Source Name instead of Source String.
  - **svs~RetryAmount**: Implement Retries, Be able to set DataInterestRetryAmount within Config.
 
