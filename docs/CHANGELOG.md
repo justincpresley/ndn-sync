@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.2] - 2022-10-22
 ### Added
 - SharedSync is now available in SVS.
 - SVS: StateVectors are now ordered by latest entries. (for future plans)
@@ -24,5 +26,6 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.1...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.2...HEAD
+[v0.0.0-alpha.2]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.1...v0.0.0-alpha.2
 [v0.0.0-alpha.1]: https://github.com/justincpresley/ndn-sync/releases/tag/v0.0.0-alpha.1
