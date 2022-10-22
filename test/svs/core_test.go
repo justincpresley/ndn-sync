@@ -21,8 +21,23 @@
 
 package svs
 
-const (
-	TlvTypeVector      uint = 201
-	TlvTypeEntrySource uint = 202
-	TlvTypeEntrySeqno  uint = 204
+import (
+	"testing"
+
+	svs "github.com/justincpresley/ndn-sync/pkg/svs"
+	assert "github.com/stretchr/testify/assert"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
+
+func TestCoreInitialState(t *testing.T) {
+	syncPrefix, _ := enc.NameFromStr("/svs")
+	nid, _ := enc.NameFromStr("/nodename")
+	config := &svs.CoreConfig{
+		Source:         nid,
+		SyncPrefix:     syncPrefix,
+		UpdateCallback: func(missing []svs.MissingData) { return },
+	}
+	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
+	assert.Equal(t, uint(0), core.GetSeqno())
+	assert.Equal(t, svs.NewStateVector(), core.GetStateVector())
+}

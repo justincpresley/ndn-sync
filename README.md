@@ -1,6 +1,6 @@
-# ndn-sync: A Go Library for 'Sync' Protocols in NDN
-
 <div align="center">
+
+![Visual](/docs/README_VISUAL.png)
 
 ![Tests](https://img.shields.io/github/workflow/status/justincpresley/ndn-sync/Tests?label=Tests)
 ![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync)

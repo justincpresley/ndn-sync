@@ -113,7 +113,10 @@ func (sv stateVector) String() string {
 	for pair := sv.entries.Oldest(); pair != nil; pair = pair.Next() {
 		str += pair.Key + ":" + strconv.FormatUint(uint64(pair.Value), 10) + " "
 	}
-	return str // has an extra space
+	if str != "" {
+		return str[:len(str)-1]
+	}
+	return str
 }
 
 func (sv stateVector) Len() int {
