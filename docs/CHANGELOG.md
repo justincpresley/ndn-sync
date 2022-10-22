@@ -1,12 +1,13 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to syncs will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
 ### Added
+- SharedSync is now available in SVS.
 - SVS: StateVectors are now ordered by latest entries. (for future plans)
 - SVS Scheduler now properly adds randomness to values.
 - Users of SVS can now define the initial fetcher queue length.

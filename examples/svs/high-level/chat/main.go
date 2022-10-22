@@ -74,7 +74,7 @@ func main() {
 		}
 		fmt.Print(input)
 	}
-	sync := svs.NewNativeSync(app, svs.GetBasicNativeConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
+	sync := svs.NewSharedSync(app, svs.GetBasicSharedConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
 	sync.Listen()
 	sync.Activate(true)
 	defer sync.Shutdown()
