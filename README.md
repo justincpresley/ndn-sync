@@ -14,11 +14,7 @@ Dataset Synchronization ('*Sync*' for short) Protocols that can be used to write
 various real-time NDN Applications.
 
 The goal of '*Sync*' is to inform others about updates in a dataset and/or to learn
-<<<<<<< HEAD
 about newly published data effectively synchronizing data in a group.
-=======
-about newly published data effectively synchronizing a group.
->>>>>>> 07005ddb4e9318676c4b1e180271e34eedaa1cea
 `ndn-sync` welcomes both newcomers and experts.
 
 
