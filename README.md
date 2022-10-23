@@ -20,7 +20,7 @@ about newly published data effectively synchronizing data in a group.
 
 # Branches
 
-`ndn-sync` is broken into two main branches with their differences described below:
+***ndn-sync*** is broken into two main branches with their differences described below:
 
 * [***production***](https://github.com/justincpresley/ndn-sync/tree/production): The master branch which holds Syncs along with modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
 * [***specification***](https://github.com/justincpresley/ndn-sync/tree/specification): The side branch which holds Syncs in their original form according to their technical specification.
@@ -31,14 +31,14 @@ about newly published data effectively synchronizing data in a group.
 There are many Syncs!
 
 Ones that are being used in applications, others that are currently experiments,
-and some that have yet to be discovered. `ndn-sync` gladly accepts any
+and some that have yet to be discovered. ***ndn-sync*** gladly accepts any
 kind of Sync protocol with a slight bias towards new and/or stable Syncs.
 
 This [Sync Survey](https://named-data.net/wp-content/uploads/2021/05/ndn-0053-2-sync-survey.pdf)
 describes many of the Syncs that are currently known and their unique differences. It is a highly
 recommended read.
 
-`ndn-sync` has the following Syncs implemented:
+***ndn-sync*** has the following Syncs implemented:
 
 * **svs: StateVectorSync**
 
