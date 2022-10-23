@@ -9,21 +9,13 @@
 
 </div>
 
-`ndn-sync` is a [Go](https://go.dev/) library implementing [Named Data Networking](https://named-data.net/) (NDN) Distributed Dataset Synchronization '*Sync*' Protocols that can be used to write various real-time NDN Applications.
+***ndn-sync*** is a [Go](https://go.dev/) library implementing [Named Data Networking](https://named-data.net/) (NDN) Distributed Dataset Synchronization '*Sync*' Protocols that can be used to write various real-time NDN Applications.
 
 The goal of '*Sync*' is to inform others about updates in a dataset and/or to learn
 about newly published data effectively synchronizing data in a group.
-`ndn-sync` welcomes both newcomers and experts.
+***ndn-sync*** welcomes both newcomers and experts.
 
-`ndn-sync` is implemented using [go-ndn](https://github.com/zjkmxy/go-ndn).
-
-
-## Table of contents
-
-<!--ts-->
-   * [Branches](#branches)
-   * [Syncs](#syncs)
-<!--te-->
+***ndn-sync*** is implemented using the NDN library [go-ndn](https://github.com/zjkmxy/go-ndn).
 
 
 # Branches
@@ -49,3 +41,5 @@ recommended read.
 `ndn-sync` has the following Syncs implemented:
 
 * **svs: StateVectorSync**
+
+# Usage
