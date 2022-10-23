@@ -18,15 +18,15 @@ about newly published data effectively synchronizing data in a group.
 ***ndn-sync*** is implemented using the NDN library [go-ndn](https://github.com/zjkmxy/go-ndn).
 
 
-# Branches
+## Branches
 
 ***ndn-sync*** is broken into two main branches with their differences described below:
 
-* [***production***](https://github.com/justincpresley/ndn-sync/tree/production): The master branch which holds Syncs along with modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
+* [***production***](https://github.com/justincpresley/ndn-sync/tree/production): The master branch which holds Syncs along with any modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
 * [***specification***](https://github.com/justincpresley/ndn-sync/tree/specification): The side branch which holds Syncs in their original form according to their technical specification.
 
 
-# Syncs
+## Syncs
 
 There are many Syncs!
 
@@ -35,11 +35,16 @@ and some that have yet to be discovered. ***ndn-sync*** gladly accepts any
 kind of Sync protocol with a slight bias towards new and/or stable Syncs.
 
 This [Sync Survey](https://named-data.net/wp-content/uploads/2021/05/ndn-0053-2-sync-survey.pdf)
-describes many of the Syncs that are currently known and their unique differences. It is a highly
-recommended read.
+describes many of the Syncs that are currently known and their unique differences. It is a recommended read.
 
 ***ndn-sync*** has the following Syncs implemented:
 
 * **svs: StateVectorSync**
 
-# Usage
+## Usage
+
+In order to utilize ***ndn-sync***, two prerequisites are needed: [The NDN Forwarding Daemon (NFD)](https://named-data.net/doc/NFD/current/INSTALL.html) and [The Go Programming Language](https://go.dev/dl/).
+
+It is highly recommended that you check out our examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
+
+***ndn-sync***'s API documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/justincpresley/ndn-sync).
