@@ -16,21 +16,24 @@ updates in a dataset and/or to learn about newly published data. **ndn-sync** we
 both newcomers and experts.
 
 
-##Table of contents
+## Table of contents
+
 <!--ts-->
    * [Branches](#branches)
    * [Syncs](#syncs)
 <!--te-->
 
 
-#Branches
+# Branches
+
 **ndn-sync** is broken into two main branches with their differences described below:
 
 * **production**: The master branch which holds Syncs along with modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
 * **specification**: The side branch which holds Syncs in their original form according to their technical specification.
 
 
-#Syncs
+# Syncs
+
 There are many Sync protocols! Ones that are being used in applications, others
 that are currently experiments, and even some that have yet to be discovered.
 **ndn-sync** gladly accepts any kind of Sync protocol with a slight bias towards
