@@ -3,6 +3,7 @@
 ![Visual](/docs/README_VISUAL.png)
 
 ![Tests](https://img.shields.io/github/workflow/status/justincpresley/ndn-sync/Tests?label=Tests)
+![CodeFactor](https://img.shields.io/codefactor/grade/github/justincpresley/ndn-sync?label=CodeFactor)
 ![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync)
 ![Version](https://img.shields.io/github/v/tag/justincpresley/ndn-sync?label=Latest%20version)
 ![License](https://img.shields.io/github/license/justincpresley/ndn-sync?label=License)
@@ -12,7 +13,7 @@
 ***ndn-sync*** is a [Go](https://go.dev/) library implementing [Named Data Networking](https://named-data.net/) (NDN) Distributed Dataset Synchronization '*Sync*' Protocols that can be used to write various real-time NDN Applications.
 
 The goal of '*Sync*' is to inform others about updates in a dataset and/or to learn
-about newly published data effectively synchronizing data in a group.
+about newly published data, effectively synchronizing data in a group.
 ***ndn-sync*** welcomes both newcomers and experts.
 
 ***ndn-sync*** is implemented using the NDN library [go-ndn](https://github.com/zjkmxy/go-ndn).
@@ -20,7 +21,7 @@ about newly published data effectively synchronizing data in a group.
 
 ## Branches
 
-***ndn-sync*** is broken into two main branches with their differences described below:
+***ndn-sync*** contains two main branches with their differences described below:
 
 * [***production***](https://github.com/justincpresley/ndn-sync/tree/production): The master branch which holds Syncs along with any modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
 * [***specification***](https://github.com/justincpresley/ndn-sync/tree/specification): The side branch which holds Syncs in their original form according to their technical specification.
