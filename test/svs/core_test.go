@@ -21,30 +21,23 @@
 
 package svs
 
-type MissingData interface {
-	Source() string
-	LowSeqno() uint
-	HighSeqno() uint
-}
+import (
+	"testing"
 
-type missingData struct {
-	source    string
-	lowSeqno  uint
-	highSeqno uint
-}
+	svs "github.com/justincpresley/ndn-sync/pkg/svs"
+	assert "github.com/stretchr/testify/assert"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
+)
 
-func NewMissingData(source string, low uint, high uint) MissingData {
-	return missingData{source: source, lowSeqno: low, highSeqno: high}
-}
-
-func (md missingData) Source() string {
-	return md.source
-}
-
-func (md missingData) LowSeqno() uint {
-	return md.lowSeqno
-}
-
-func (md missingData) HighSeqno() uint {
-	return md.highSeqno
+func TestCoreInitialState(t *testing.T) {
+	syncPrefix, _ := enc.NameFromStr("/svs")
+	nid, _ := enc.NameFromStr("/nodename")
+	config := &svs.CoreConfig{
+		Source:         nid,
+		SyncPrefix:     syncPrefix,
+		UpdateCallback: func(missing []svs.MissingData) { return },
+	}
+	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
+	assert.Equal(t, uint(0), core.GetSeqno())
+	assert.Equal(t, svs.NewStateVector(), core.GetStateVector())
 }

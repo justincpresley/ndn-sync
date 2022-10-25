@@ -21,30 +21,11 @@
 
 package svs
 
-type MissingData interface {
-	Source() string
-	LowSeqno() uint
-	HighSeqno() uint
-}
+import (
+	"math/rand"
+	"time"
+)
 
-type missingData struct {
-	source    string
-	lowSeqno  uint
-	highSeqno uint
-}
-
-func NewMissingData(source string, low uint, high uint) MissingData {
-	return missingData{source: source, lowSeqno: low, highSeqno: high}
-}
-
-func (md missingData) Source() string {
-	return md.source
-}
-
-func (md missingData) LowSeqno() uint {
-	return md.lowSeqno
-}
-
-func (md missingData) HighSeqno() uint {
-	return md.highSeqno
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
