@@ -64,7 +64,7 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		typ    uint
 	)
 	// verify type
-	if uint(comp.Typ) != TlvTypeVector {
+	if comp.Typ != TypeVector {
 		return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 	}
 	// decode components
@@ -73,7 +73,7 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		// source
 		typ, temp = parse_uint(buf, pos)
 		pos += temp
-		if typ != TlvTypeEntrySource {
+		if enc.TLNum(typ) != TypeEntrySource {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
 		length, temp = parse_uint(buf, pos)
@@ -83,7 +83,7 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		// seqno
 		typ, temp = parse_uint(buf, pos)
 		pos += temp
-		if typ != TlvTypeEntrySeqno {
+		if enc.TLNum(typ) != TypeEntrySeqno {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
 		length, temp = parse_uint(buf, pos)
@@ -137,30 +137,30 @@ func (sv stateVector) Entries() *om.OrderedMap[string, uint] {
 
 func (sv stateVector) ToComponent() enc.Component {
 	var (
-		length uint = 2 * uint(sv.entries.Len())
+		pos    int
+		length int = 2 * sv.entries.Len()
 		pair   *om.Pair[string, uint]
-		pos    uint
 	)
 	// component value space
 	for pair = sv.entries.Oldest(); pair != nil; pair = pair.Next() {
 		length += get_uint_byte_size(uint(len(pair.Key)))
-		length += uint(len(pair.Key))
-		length += get_uint_byte_size(get_uint_byte_size(pair.Value))
+		length += len(pair.Key)
+		length += get_uint_byte_size(uint(get_uint_byte_size(pair.Value)))
 		length += get_uint_byte_size(pair.Value)
 	}
 	// make and fill the component
 	comp := enc.Component{
-		Typ: enc.TLNum(TlvTypeVector),
+		Typ: TypeVector,
 		Val: make([]byte, length),
 	}
 	buf := comp.Val
 	for pair = sv.entries.Oldest(); pair != nil; pair = pair.Next() {
-		pos += write_uint(TlvTypeEntrySource, buf, pos)
+		pos += TypeEntrySource.EncodeInto(buf[pos:])
 		pos += write_uint(uint(len(pair.Key)), buf, pos)
 		copy(buf[pos:], pair.Key)
-		pos += uint(len(pair.Key))
-		pos += write_uint(TlvTypeEntrySeqno, buf, pos)
-		pos += write_uint(get_uint_byte_size(pair.Value), buf, pos)
+		pos += len(pair.Key)
+		pos += TypeEntrySeqno.EncodeInto(buf[pos:])
+		pos += write_uint(uint(get_uint_byte_size(pair.Value)), buf, pos)
 		pos += write_uint(pair.Value, buf, pos)
 	}
 	return comp
