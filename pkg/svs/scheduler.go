@@ -26,10 +26,6 @@ import (
 	"time"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 type Scheduler struct {
 	function   func()
 	interval   uint

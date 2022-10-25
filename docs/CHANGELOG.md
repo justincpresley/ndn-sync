@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+### Changed
+- Pulled out init() into its own file.
 
 ## [v0.0.0-alpha.2] - 2022-10-22
 ### Added

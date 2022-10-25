@@ -40,7 +40,8 @@ describes many of the Syncs that are currently known and their unique difference
 
 ***ndn-sync*** has the following Syncs implemented:
 
-* **svs: StateVectorSync**
+* `svs` - **StateVectorSync**
+
 
 ## Usage
 
@@ -49,3 +50,8 @@ In order to utilize ***ndn-sync***, two prerequisites are needed: [The NDN Forwa
 It is highly recommended that you check out our examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
 
 ***ndn-sync***'s API documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/justincpresley/ndn-sync).
+
+
+## License
+
+***ndn-sync*** is an open source project licensed under the LGPL Version 2.1+. See LICENSE.md for more information.
