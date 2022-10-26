@@ -37,9 +37,12 @@ type StateVector interface {
 	Total() uint
 	Entries() *om.OrderedMap[string, uint]
 	ToComponent() enc.Component
+	EncodingLength() int
+	EncodeInto(buf []byte) int
 }
 
 type stateVector struct {
+	// WARNING: ideally enc.Name, unable due to not implementing comparable
 	entries *om.OrderedMap[string, uint]
 }
 
@@ -55,7 +58,7 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		}
 	}()
 	var (
-		source string
+		source enc.Name
 		seqno  uint
 		buf    []byte = comp.Val
 		pos    uint
@@ -70,15 +73,23 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 	// decode components
 	ret = NewStateVector()
 	for pos < uint(len(buf)) {
+		// entry
+		typ, temp = parse_uint(buf, pos)
+		pos += temp
+		if enc.TLNum(typ) != TypeEntry {
+			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		}
+		_, temp = parse_uint(buf, pos)
+		pos += temp
 		// source
 		typ, temp = parse_uint(buf, pos)
 		pos += temp
-		if enc.TLNum(typ) != TypeEntrySource {
+		if enc.TLNum(typ) != enc.TypeName {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
 		length, temp = parse_uint(buf, pos)
 		pos += temp
-		source = string(buf[pos : pos+length])
+		source, _ = enc.ReadName(enc.NewBufferReader(buf[pos : pos+length]))
 		pos += length
 		// seqno
 		typ, temp = parse_uint(buf, pos)
@@ -90,8 +101,8 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		pos += temp
 		seqno, _ = parse_uint(buf, pos)
 		pos += length
-		// add the component
-		ret.Set(source, seqno, true)
+		// add the entry
+		ret.Set(source.String(), seqno, true)
 	}
 	return ret, nil
 }
@@ -110,7 +121,7 @@ func (sv stateVector) Get(source string) uint {
 
 func (sv stateVector) String() string {
 	str := ""
-	for pair := sv.entries.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := sv.entries.First(); pair != nil; pair = pair.Next() {
 		str += pair.Key + ":" + strconv.FormatUint(uint64(pair.Value), 10) + " "
 	}
 	if str != "" {
@@ -125,7 +136,7 @@ func (sv stateVector) Len() int {
 
 func (sv stateVector) Total() uint {
 	total := uint(0)
-	for pair := sv.entries.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := sv.entries.First(); pair != nil; pair = pair.Next() {
 		total += pair.Value
 	}
 	return total
@@ -136,32 +147,74 @@ func (sv stateVector) Entries() *om.OrderedMap[string, uint] {
 }
 
 func (sv stateVector) ToComponent() enc.Component {
-	var (
-		pos    int
-		length int = 2 * sv.entries.Len()
-		pair   *om.Pair[string, uint]
-	)
-	// component value space
-	for pair = sv.entries.Oldest(); pair != nil; pair = pair.Next() {
-		length += get_uint_byte_size(uint(len(pair.Key)))
-		length += len(pair.Key)
-		length += get_uint_byte_size(uint(get_uint_byte_size(pair.Value)))
-		length += get_uint_byte_size(pair.Value)
-	}
-	// make and fill the component
+	length := sv.EncodingLength()
 	comp := enc.Component{
 		Typ: TypeVector,
 		Val: make([]byte, length),
 	}
-	buf := comp.Val
-	for pair = sv.entries.Oldest(); pair != nil; pair = pair.Next() {
-		pos += TypeEntrySource.EncodeInto(buf[pos:])
-		pos += write_uint(uint(len(pair.Key)), buf, pos)
-		copy(buf[pos:], pair.Key)
-		pos += len(pair.Key)
-		pos += TypeEntrySeqno.EncodeInto(buf[pos:])
-		pos += write_uint(uint(get_uint_byte_size(pair.Value)), buf, pos)
-		pos += write_uint(pair.Value, buf, pos)
-	}
+	sv.EncodeInto(comp.Val)
 	return comp
+}
+
+func (sv stateVector) EncodingLength() int {
+	var (
+		entry int
+		total int
+		t     int
+		n     enc.Name
+	)
+	for pair := sv.entries.First(); pair != nil; pair = pair.Next() {
+		n, _ = enc.NameFromStr(pair.Key)
+		t = n.EncodingLength()
+		// source
+		entry = enc.TypeName.EncodingLength()
+		entry += get_uint_byte_size(uint(t))
+		entry += t
+		// seqno
+		entry += TypeEntrySeqno.EncodingLength()
+		entry += get_uint_byte_size(uint(get_uint_byte_size(pair.Value)))
+		entry += get_uint_byte_size(pair.Value)
+		// entry
+		total += TypeEntry.EncodingLength()
+		total += get_uint_byte_size(uint(entry))
+		total += entry
+	}
+	return total
+}
+
+func (sv stateVector) EncodeInto(buf []byte) int {
+	var (
+		entryLen int
+		offset   int
+		pos      int
+		n        enc.Name
+		t        int
+	)
+	for pair := sv.entries.First(); pair != nil; pair = pair.Next() {
+		n, _ = enc.NameFromStr(pair.Key)
+		t = n.EncodingLength()
+		// entry length
+		entryLen = enc.TypeName.EncodingLength()
+		entryLen += get_uint_byte_size(uint(t))
+		entryLen += t
+		entryLen += TypeEntrySeqno.EncodingLength()
+		entryLen += get_uint_byte_size(uint(get_uint_byte_size(pair.Value)))
+		entryLen += get_uint_byte_size(pair.Value)
+		offset = TypeEntry.EncodingLength() + get_uint_byte_size(uint(entryLen))
+		entryLen = offset
+		// source
+		entryLen += enc.TypeName.EncodeInto(buf[pos+entryLen:])
+		entryLen += write_uint(uint(t), buf, pos+entryLen)
+		entryLen += n.EncodeInto(buf[pos+entryLen:])
+		// seqno
+		entryLen += TypeEntrySeqno.EncodeInto(buf[pos+entryLen:])
+		entryLen += write_uint(uint(get_uint_byte_size(pair.Value)), buf, pos+entryLen)
+		entryLen += write_uint(pair.Value, buf, pos+entryLen)
+		// entry
+		entryLen -= offset
+		pos += TypeEntry.EncodeInto(buf[pos:])
+		pos += write_uint(uint(entryLen), buf, pos)
+		pos += entryLen
+	}
+	return pos
 }

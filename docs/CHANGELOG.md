@@ -9,6 +9,7 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ### Changed
 - Pulled out init() into its own file.
 - Utilize TLNum (instead of uint) for TlvTypes.
+- Fixed StateVector Encoding to met specification.
 
 ## [v0.0.0-alpha.2] - 2022-10-22
 ### Added

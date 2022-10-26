@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	TypeVector      enc.TLNum = 0xc9
-	TypeEntrySource enc.TLNum = 0xca
-	TypeEntrySeqno  enc.TLNum = 0xcb
+	TypeVector     enc.TLNum = 0xc9
+	TypeEntry      enc.TLNum = 0xca
+	TypeEntrySeqno enc.TLNum = 0xcc
 )
