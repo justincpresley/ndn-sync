@@ -24,7 +24,7 @@ package ndnsync
 
 const (
 	Branch  = "production"
-	Version = "v0.0.0-alpha.2"
+	Version = "v0.0.0-alpha.3"
 	License = "LGPL-2.1 License"
 	Source  = "github.com/justincpresley/ndn-sync"
 )
