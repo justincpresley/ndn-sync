@@ -35,9 +35,12 @@ type StateVector interface {
 	Len() int
 	Entries() map[string]uint
 	ToComponent() enc.Component
+	EncodingLength() int
+	EncodeInto(buf []byte) int
 }
 
 type stateVector struct {
+	// WARNING: ideally enc.Name, unable due to not implementing comparable
 	entries map[string]uint
 }
 
@@ -53,7 +56,7 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		}
 	}()
 	var (
-		source string
+		source enc.Name
 		seqno  uint
 		buf    []byte = comp.Val
 		pos    uint
@@ -68,15 +71,23 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 	// decode components
 	ret = NewStateVector()
 	for pos < uint(len(buf)) {
+		// entry
+		typ, temp = parse_uint(buf, pos)
+		pos += temp
+		if enc.TLNum(typ) != TypeEntry {
+			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		}
+		_, temp = parse_uint(buf, pos)
+		pos += temp
 		// source
 		typ, temp = parse_uint(buf, pos)
 		pos += temp
-		if enc.TLNum(typ) != TypeEntrySource {
+		if enc.TLNum(typ) != enc.TypeName {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
 		length, temp = parse_uint(buf, pos)
 		pos += temp
-		source = string(buf[pos : pos+length])
+		source, _ = enc.ReadName(enc.NewBufferReader(buf[pos : pos+length]))
 		pos += length
 		// seqno
 		typ, temp = parse_uint(buf, pos)
@@ -88,8 +99,8 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		pos += temp
 		seqno, _ = parse_uint(buf, pos)
 		pos += length
-		// add the component
-		ret.Set(source, seqno)
+		// add the entry
+		ret.Set(source.String(), seqno)
 	}
 	return ret, nil
 }
@@ -111,7 +122,10 @@ func (sv stateVector) String() string {
 	for key, ele := range sv.entries {
 		str += key + ":" + strconv.FormatUint(uint64(ele), 10) + " "
 	}
-	return str // has an extra space
+	if str != "" {
+		return str[:len(str)-1]
+	}
+	return str
 }
 
 func (sv stateVector) Len() int {
@@ -119,31 +133,74 @@ func (sv stateVector) Len() int {
 }
 
 func (sv stateVector) ToComponent() enc.Component {
-	var (
-		pos    int
-		length int = 2 * len(sv.entries)
-	)
-	// component value space
-	for key, ele := range sv.entries {
-		length += get_uint_byte_size(uint(len(key)))
-		length += len(key)
-		length += get_uint_byte_size(uint(get_uint_byte_size(ele)))
-		length += get_uint_byte_size(ele)
-	}
-	// make and fill the component
+	length := sv.EncodingLength()
 	comp := enc.Component{
 		Typ: TypeVector,
 		Val: make([]byte, length),
 	}
-	buf := comp.Val
-	for key, ele := range sv.entries {
-		pos += TypeEntrySource.EncodeInto(buf[pos:])
-		pos += write_uint(uint(len(key)), buf, pos)
-		copy(buf[pos:], key)
-		pos += len(key)
-		pos += TypeEntrySeqno.EncodeInto(buf[pos:])
-		pos += write_uint(uint(get_uint_byte_size(ele)), buf, pos)
-		pos += write_uint(ele, buf, pos)
-	}
+	sv.EncodeInto(comp.Val)
 	return comp
+}
+
+func (sv stateVector) EncodingLength() int {
+	var (
+		entry int
+		total int
+		t     int
+		n     enc.Name
+	)
+	for key, ele := range sv.entries {
+		n, _ = enc.NameFromStr(key)
+		t = n.EncodingLength()
+		// source
+		entry = enc.TypeName.EncodingLength()
+		entry += get_uint_byte_size(uint(t))
+		entry += t
+		// seqno
+		entry += TypeEntrySeqno.EncodingLength()
+		entry += get_uint_byte_size(uint(get_uint_byte_size(ele)))
+		entry += get_uint_byte_size(ele)
+		// entry
+		total += TypeEntry.EncodingLength()
+		total += get_uint_byte_size(uint(entry))
+		total += entry
+	}
+	return total
+}
+
+func (sv stateVector) EncodeInto(buf []byte) int {
+	var (
+		entryLen int
+		offset   int
+		pos      int
+		n        enc.Name
+		t        int
+	)
+	for key, ele := range sv.entries {
+		n, _ = enc.NameFromStr(key)
+		t = n.EncodingLength()
+		// entry length
+		entryLen = enc.TypeName.EncodingLength()
+		entryLen += get_uint_byte_size(uint(t))
+		entryLen += t
+		entryLen += TypeEntrySeqno.EncodingLength()
+		entryLen += get_uint_byte_size(uint(get_uint_byte_size(ele)))
+		entryLen += get_uint_byte_size(ele)
+		offset = TypeEntry.EncodingLength() + get_uint_byte_size(uint(entryLen))
+		entryLen = offset
+		// source
+		entryLen += enc.TypeName.EncodeInto(buf[pos+entryLen:])
+		entryLen += write_uint(uint(t), buf, pos+entryLen)
+		entryLen += n.EncodeInto(buf[pos+entryLen:])
+		// seqno
+		entryLen += TypeEntrySeqno.EncodeInto(buf[pos+entryLen:])
+		entryLen += write_uint(uint(get_uint_byte_size(ele)), buf, pos+entryLen)
+		entryLen += write_uint(ele, buf, pos+entryLen)
+		// entry
+		entryLen -= offset
+		pos += TypeEntry.EncodeInto(buf[pos:])
+		pos += write_uint(uint(entryLen), buf, pos)
+		pos += entryLen
+	}
+	return pos
 }

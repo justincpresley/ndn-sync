@@ -56,21 +56,20 @@ func TestStateVectorLoop(t *testing.T) {
 
 func TestStateVectorEncodeDecode(t *testing.T) {
 	sv := svs.NewStateVector()
-	sv.Set("one", 1)
-	sv.Set("two", 2)
+	sv.Set("/one", 1)
+	sv.Set("/two", 2)
 	comp := sv.ToComponent()
 	nsv, _ := svs.ParseStateVector(comp)
-	assert.Equal(t, uint(1), nsv.Get("one"))
-	assert.Equal(t, uint(2), nsv.Get("two"))
+	assert.Equal(t, uint(1), nsv.Get("/one"))
+	assert.Equal(t, uint(2), nsv.Get("/two"))
 	assert.Equal(t, int(2), nsv.Len())
 	assert.Equal(t, sv, nsv)
 }
 
 func TestStateVectorDecodeStatic(t *testing.T) {
-	// WARNING: this does differ due to encoding entry's sources as strings and not as names, STC
-	comp, _ := enc.ComponentFromBytes([]byte{201, 16, 202, 3, 111, 110, 101, 203, 1, 1, 202, 3, 116, 119, 111, 203, 1, 2})
+	comp, _ := enc.ComponentFromBytes([]byte{201, 24, 202, 10, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 202, 10, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2})
 	sv, _ := svs.ParseStateVector(*comp)
-	assert.Equal(t, uint(1), sv.Get("one"))
-	assert.Equal(t, uint(2), sv.Get("two"))
+	assert.Equal(t, uint(1), sv.Get("/one"))
+	assert.Equal(t, uint(2), sv.Get("/two"))
 	assert.Equal(t, int(2), sv.Len())
 }
