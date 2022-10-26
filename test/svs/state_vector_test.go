@@ -48,7 +48,7 @@ func TestStateVectorLoop(t *testing.T) {
 	sv.Set("/node1", 2)
 	sv.Set("/node2", 8)
 	sv.Set("/node3", 1)
-  for key, ele := range sv.Entries() {
+	for key, ele := range sv.Entries() {
 		nsv.Set(key, ele)
 	}
 	assert.Equal(t, sv, nsv)
@@ -68,7 +68,7 @@ func TestStateVectorEncodeDecode(t *testing.T) {
 
 func TestStateVectorDecodeStatic(t *testing.T) {
 	// WARNING: this does differ due to encoding entry's sources as strings and not as names, STC
-	comp, _ := enc.ComponentFromBytes([]byte{201, 16, 202, 3, 111, 110, 101, 204, 1, 1, 202, 3, 116, 119, 111, 204, 1, 2})
+	comp, _ := enc.ComponentFromBytes([]byte{201, 16, 202, 3, 111, 110, 101, 203, 1, 1, 202, 3, 116, 119, 111, 203, 1, 2})
 	sv, _ := svs.ParseStateVector(*comp)
 	assert.Equal(t, uint(1), sv.Get("one"))
 	assert.Equal(t, uint(2), sv.Get("two"))

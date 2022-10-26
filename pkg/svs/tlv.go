@@ -21,8 +21,12 @@
 
 package svs
 
+import (
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
+)
+
 const (
-	TlvTypeVector      uint = 201
-	TlvTypeEntrySource uint = 202
-	TlvTypeEntrySeqno  uint = 204
+	TypeVector      enc.TLNum = 0xc9
+	TypeEntrySource enc.TLNum = 0xca
+	TypeEntrySeqno  enc.TLNum = 0xcb
 )

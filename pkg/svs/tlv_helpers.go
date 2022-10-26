@@ -25,7 +25,7 @@ import (
 	"encoding/binary"
 )
 
-func get_uint_byte_size(val uint) uint {
+func get_uint_byte_size(val uint) int {
 	switch {
 	case val <= 0xfc:
 		return 1
@@ -38,7 +38,7 @@ func get_uint_byte_size(val uint) uint {
 	}
 }
 
-func write_uint(val uint, buf []byte, offset uint) uint {
+func write_uint(val uint, buf []byte, offset int) int {
 	switch {
 	case val <= 0xfc:
 		buf[offset] = byte(val)
