@@ -1,7 +1,7 @@
 # Changes Made
 
 All substantial changes/modifications/additions away from the original repository are documented in this file.
-These changes were performed on the original repositry at the commit `ab40b2b9a64414289e84274611d1fee69e52ff55`.
+These changes were performed on the original repository at the commit `ab40b2b9a64414289e84274611d1fee69e52ff55`.
 
 ## Added
 - New External API Functions: Clone() / Copy(), Reverse(), Size(), First() / Front(), Last() / Back() which are self-described.

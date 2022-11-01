@@ -67,7 +67,7 @@ type SharedSync struct {
 	logger      *log.Entry
 	dataCall    func(source string, seqno uint, data ndn.Data)
 	updateCall  func(sync *SharedSync, missing []MissingData)
-	fetchQueue  chan func() (string, uint, bool)
+	fetchQueue  chan func() (string, uint, bool, uint)
 	numFetches  uint // TODO: likely a data race here
 	isListening bool
 }
@@ -133,7 +133,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
-		fetchQueue: make(chan func() (string, uint, bool), constants.InitialFetchQueueLength),
+		fetchQueue: make(chan func() (string, uint, bool, uint), constants.InitialFetchQueueLength),
 	}
 	return s
 }
@@ -172,11 +172,11 @@ func (s *SharedSync) Shutdown() {
 
 func (s *SharedSync) FetchData(source string, seqno uint, cache bool) {
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
-		s.sendInterest(source, seqno, cache)
+		s.sendInterest(source, seqno, cache, s.constants.DataInterestRetries)
 		s.numFetches++
 		return
 	}
-	s.fetchQueue <- func() (string, uint, bool) { return source, seqno, cache }
+	s.fetchQueue <- func() (string, uint, bool, uint) { return source, seqno, cache, s.constants.DataInterestRetries }
 }
 
 func (s *SharedSync) PublishData(content []byte) {
@@ -209,7 +209,7 @@ func (s *SharedSync) GetCore() *Core {
 	return s.core
 }
 
-func (s *SharedSync) sendInterest(source string, seqno uint, cache bool) {
+func (s *SharedSync) sendInterest(source string, seqno uint, cache bool, retries uint) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
@@ -217,17 +217,17 @@ func (s *SharedSync) sendInterest(source string, seqno uint, cache bool) {
 	}
 	err = s.app.Express(finalName, s.intCfg, wire,
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
-			if result == ndn.InterestResultData {
-				if cache {
+			if result == ndn.InterestResultData || result == ndn.InterestResultNack || retries == 0 {
+				if cache && result == ndn.InterestResultData {
 					s.storage.Set(finalName.Bytes(), rawData.Join())
 				}
 				s.dataCall(source, seqno, data)
+				s.numFetches--
+				s.processQueue()
 			} else {
-				// TODO: implement retry amount
-				s.dataCall(source, seqno, nil)
+				retries--
+				s.sendInterest(source, seqno, cache, retries)
 			}
-			s.numFetches--
-			s.processQueue()
 		})
 	if err != nil {
 		s.logger.Errorf("Unable to send Interest: %+v", err)
