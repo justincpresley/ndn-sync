@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+- All Syncs in SVS now implement retries!
+- BloomFilter internal code. (for future plans)
 
 ## [v0.0.0-alpha.3] - 2022-10-26
 ### Changed
