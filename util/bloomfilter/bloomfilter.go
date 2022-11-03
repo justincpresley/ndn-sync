@@ -19,18 +19,17 @@ import (
 	"hash"
 	"math"
 
-	bitset "github.com/justincpresley/ndn-sync/util/bitset"
 	xxhash3 "github.com/zeebo/xxh3"
 )
 
 // The standard bloom-filter, which allows adding of
 // elements, and checking for their existence
 type Filter struct {
-	k      uint           // Number of hash functions
-	m      uint           // Size of the bloom-filter
-	hashfn hash.Hash64    // The hash function
-	idxes  []uint         // Current indexes for data
-	bitmap *bitset.BitSet // The bloom-filter bitmap
+	k      uint        // Number of hash functions
+	m      uint        // Size of the bloom-filter
+	hashfn hash.Hash64 // The hash function
+	idxes  []uint      // Current indexes for data
+	bitmap *bitset     // The bloom-filter bitmap
 }
 
 // Returns a new Filter object, if you pass the
@@ -42,20 +41,20 @@ func NewFilter(numHashFuncs uint, bfSize uint) *Filter {
 		m:      bfSize,
 		hashfn: xxhash3.New(), // TODO: possibly seed the hash
 		idxes:  make([]uint, numHashFuncs),
-		bitmap: bitset.New(uint32(bfSize)),
+		bitmap: newBitset(uint32(bfSize)),
 	}
 }
 
 // Parses bytes into a bloom-filter
 func ParseFilter(b []byte) (*Filter, error) {
 	k := uint(b[0])
-	bs, err := bitset.Parse(b[1:])
+	bs, err := parseBitset(b[1:])
 	if err != nil {
 		return nil, err
 	}
 	return &Filter{
 		k:      k,
-		m:      uint(bs.Len()),
+		m:      uint(bs.length()),
 		hashfn: xxhash3.New(), // TODO: possibly seed the hash
 		idxes:  make([]uint, k),
 		bitmap: bs,
@@ -90,7 +89,7 @@ func (f *Filter) setIndexes(d []byte) {
 func (f *Filter) Add(d []byte) {
 	f.setIndexes(d)
 	for _, idx := range f.idxes {
-		f.bitmap.Set(idx, true)
+		f.bitmap.operate(idx, true)
 	}
 }
 
@@ -100,7 +99,7 @@ func (f *Filter) Check(d []byte) bool {
 	f.setIndexes(d)
 	result := true
 	for _, idx := range f.idxes {
-		result = result && f.bitmap.Test(idx)
+		result = result && f.bitmap.test(idx)
 	}
 	return result
 }
@@ -108,12 +107,12 @@ func (f *Filter) Check(d []byte) bool {
 // Turns the bloom-filter into bytes
 func (f *Filter) Bytes() ([]byte, error) {
 	var buf bytes.Buffer
-	buf.Grow(int(1 + f.bitmap.WriteSize()))
+	buf.Grow(int(1 + f.bitmap.writeSize()))
 	err := buf.WriteByte(byte(f.k))
 	if err != nil {
 		return nil, err
 	}
-	err = f.bitmap.WriteTo(&buf)
+	err = f.bitmap.writeTo(&buf)
 	if err != nil {
 		return nil, err
 	}
