@@ -19,13 +19,13 @@
           https://github.com/justincpresley/ndn-sync
 */
 
-package svs
+package tlvhelp
 
 import (
 	"encoding/binary"
 )
 
-func get_uint_byte_size(val uint) int {
+func GetUintByteSize(val uint) int {
 	switch {
 	case val <= 0xfc:
 		return 1
@@ -38,7 +38,7 @@ func get_uint_byte_size(val uint) int {
 	}
 }
 
-func write_uint(val uint, buf []byte, offset int) int {
+func WriteUint(val uint, buf []byte, offset int) int {
 	switch {
 	case val <= 0xfc:
 		buf[offset] = byte(val)
@@ -58,7 +58,7 @@ func write_uint(val uint, buf []byte, offset int) int {
 	}
 }
 
-func parse_uint(buf []byte, offset uint) (uint, uint) {
+func ParseUint(buf []byte, offset uint) (uint, uint) {
 	switch ret := buf[offset]; {
 	case ret <= 0xfc:
 		return uint(ret), 1

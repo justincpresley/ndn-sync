@@ -15,10 +15,11 @@
 package bloomfilter
 
 import (
+	"bytes"
 	"hash"
 	"math"
 
-	bitset "github.com/bits-and-blooms/bitset"
+	bitset "github.com/justincpresley/ndn-sync/util/bitset"
 	xxhash3 "github.com/zeebo/xxh3"
 )
 
@@ -41,8 +42,24 @@ func NewFilter(numHashFuncs uint, bfSize uint) *Filter {
 		m:      bfSize,
 		hashfn: xxhash3.New(), // TODO: possibly seed the hash
 		idxes:  make([]uint, numHashFuncs),
-		bitmap: bitset.New(bfSize),
+		bitmap: bitset.New(uint32(bfSize)),
 	}
+}
+
+// Parses bytes into a bloom-filter
+func ParseFilter(b []byte) (*Filter, error) {
+	k := uint(b[0])
+	bs, err := bitset.Parse(b[1:])
+	if err != nil {
+		return nil, err
+	}
+	return &Filter{
+		k:      k,
+		m:      uint(bs.Len()),
+		hashfn: xxhash3.New(), // TODO: possibly seed the hash
+		idxes:  make([]uint, k),
+		bitmap: bs,
+	}, nil
 }
 
 func (f *Filter) getHash(d []byte) (uint32, uint32) {
@@ -73,7 +90,7 @@ func (f *Filter) setIndexes(d []byte) {
 func (f *Filter) Add(d []byte) {
 	f.setIndexes(d)
 	for _, idx := range f.idxes {
-		f.bitmap.Set(idx)
+		f.bitmap.Set(idx, true)
 	}
 }
 
@@ -84,9 +101,23 @@ func (f *Filter) Check(d []byte) bool {
 	result := true
 	for _, idx := range f.idxes {
 		result = result && f.bitmap.Test(idx)
-		f.bitmap.Set(idx)
 	}
 	return result
+}
+
+// Turns the bloom-filter into bytes
+func (f *Filter) Bytes() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.Grow(int(1 + f.bitmap.WriteSize()))
+	err := buf.WriteByte(byte(f.k))
+	if err != nil {
+		return nil, err
+	}
+	err = f.bitmap.WriteTo(&buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), err
 }
 
 // Returns the current False Positive Rate of the bloom-filter

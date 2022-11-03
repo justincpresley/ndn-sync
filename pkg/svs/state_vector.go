@@ -25,7 +25,8 @@ import (
 	"errors"
 	"strconv"
 
-	om "github.com/justincpresley/ndn-sync/internal/orderedmap"
+	om "github.com/justincpresley/ndn-sync/util/orderedmap"
+	tlvh "github.com/justincpresley/ndn-sync/util/tlvhelp"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
@@ -74,32 +75,32 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 	ret = NewStateVector()
 	for pos < uint(len(buf)) {
 		// entry
-		typ, temp = parse_uint(buf, pos)
+		typ, temp = tlvh.ParseUint(buf, pos)
 		pos += temp
 		if enc.TLNum(typ) != TypeEntry {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
-		_, temp = parse_uint(buf, pos)
+		_, temp = tlvh.ParseUint(buf, pos)
 		pos += temp
 		// source
-		typ, temp = parse_uint(buf, pos)
+		typ, temp = tlvh.ParseUint(buf, pos)
 		pos += temp
 		if enc.TLNum(typ) != enc.TypeName {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
-		length, temp = parse_uint(buf, pos)
+		length, temp = tlvh.ParseUint(buf, pos)
 		pos += temp
 		source, _ = enc.ReadName(enc.NewBufferReader(buf[pos : pos+length]))
 		pos += length
 		// seqno
-		typ, temp = parse_uint(buf, pos)
+		typ, temp = tlvh.ParseUint(buf, pos)
 		pos += temp
 		if enc.TLNum(typ) != TypeEntrySeqno {
 			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
 		}
-		length, temp = parse_uint(buf, pos)
+		length, temp = tlvh.ParseUint(buf, pos)
 		pos += temp
-		seqno, _ = parse_uint(buf, pos)
+		seqno, _ = tlvh.ParseUint(buf, pos)
 		pos += length
 		// add the entry
 		ret.Set(source.String(), seqno, true)
@@ -168,15 +169,15 @@ func (sv stateVector) EncodingLength() int {
 		t = n.EncodingLength()
 		// source
 		entry = enc.TypeName.EncodingLength()
-		entry += get_uint_byte_size(uint(t))
+		entry += tlvh.GetUintByteSize(uint(t))
 		entry += t
 		// seqno
 		entry += TypeEntrySeqno.EncodingLength()
-		entry += get_uint_byte_size(uint(get_uint_byte_size(pair.Value)))
-		entry += get_uint_byte_size(pair.Value)
+		entry += tlvh.GetUintByteSize(uint(tlvh.GetUintByteSize(pair.Value)))
+		entry += tlvh.GetUintByteSize(pair.Value)
 		// entry
 		total += TypeEntry.EncodingLength()
-		total += get_uint_byte_size(uint(entry))
+		total += tlvh.GetUintByteSize(uint(entry))
 		total += entry
 	}
 	return total
@@ -195,25 +196,25 @@ func (sv stateVector) EncodeInto(buf []byte) int {
 		t = n.EncodingLength()
 		// entry length
 		entryLen = enc.TypeName.EncodingLength()
-		entryLen += get_uint_byte_size(uint(t))
+		entryLen += tlvh.GetUintByteSize(uint(t))
 		entryLen += t
 		entryLen += TypeEntrySeqno.EncodingLength()
-		entryLen += get_uint_byte_size(uint(get_uint_byte_size(pair.Value)))
-		entryLen += get_uint_byte_size(pair.Value)
-		offset = TypeEntry.EncodingLength() + get_uint_byte_size(uint(entryLen))
+		entryLen += tlvh.GetUintByteSize(uint(tlvh.GetUintByteSize(pair.Value)))
+		entryLen += tlvh.GetUintByteSize(pair.Value)
+		offset = TypeEntry.EncodingLength() + tlvh.GetUintByteSize(uint(entryLen))
 		entryLen = offset
 		// source
 		entryLen += enc.TypeName.EncodeInto(buf[pos+entryLen:])
-		entryLen += write_uint(uint(t), buf, pos+entryLen)
+		entryLen += tlvh.WriteUint(uint(t), buf, pos+entryLen)
 		entryLen += n.EncodeInto(buf[pos+entryLen:])
 		// seqno
 		entryLen += TypeEntrySeqno.EncodeInto(buf[pos+entryLen:])
-		entryLen += write_uint(uint(get_uint_byte_size(pair.Value)), buf, pos+entryLen)
-		entryLen += write_uint(pair.Value, buf, pos+entryLen)
+		entryLen += tlvh.WriteUint(uint(tlvh.GetUintByteSize(pair.Value)), buf, pos+entryLen)
+		entryLen += tlvh.WriteUint(pair.Value, buf, pos+entryLen)
 		// entry
 		entryLen -= offset
 		pos += TypeEntry.EncodeInto(buf[pos:])
-		pos += write_uint(uint(entryLen), buf, pos)
+		pos += tlvh.WriteUint(uint(entryLen), buf, pos)
 		pos += entryLen
 	}
 	return pos

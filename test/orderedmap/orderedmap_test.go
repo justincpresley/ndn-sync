@@ -18,7 +18,7 @@ import (
 	"math/rand"
 	"testing"
 
-	om "github.com/justincpresley/ndn-sync/internal/orderedmap"
+	om "github.com/justincpresley/ndn-sync/util/orderedmap"
 	assert "github.com/stretchr/testify/assert"
 )
 
