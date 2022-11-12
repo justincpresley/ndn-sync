@@ -63,7 +63,7 @@ type SharedSync struct {
 	storage     Database
 	intCfg      *ndn.InterestConfig
 	datCfg      *ndn.DataConfig
-	dataComp    *enc.Component
+	dataComp    enc.Component
 	logger      *log.Entry
 	dataCall    func(source string, seqno uint, data ndn.Data)
 	updateCall  func(sync *SharedSync, missing []MissingData)
@@ -78,7 +78,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 	logger := log.WithField("module", "svs")
 	syncComp, _ := enc.ComponentFromStr("sync")
 	dataComp, _ := enc.ComponentFromStr("data")
-	syncPrefix := append(config.GroupPrefix, *syncComp)
+	syncPrefix := append(config.GroupPrefix, syncComp)
 
 	if config.DataCallback == nil {
 		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
@@ -139,7 +139,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 }
 
 func (s *SharedSync) Listen() {
-	dataPrefix := append(s.groupPrefix, *s.dataComp)
+	dataPrefix := append(s.groupPrefix, s.dataComp)
 	err := s.app.AttachHandler(dataPrefix, s.onInterest)
 	if err != nil {
 		s.logger.Errorf("Unable to register handler: %+v", err)
@@ -163,7 +163,7 @@ func (s *SharedSync) Activate(immediateStart bool) {
 func (s *SharedSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
-		dataPrefix := append(s.groupPrefix, *s.dataComp)
+		dataPrefix := append(s.groupPrefix, s.dataComp)
 		s.app.DetachHandler(dataPrefix)
 		s.app.UnregisterRoute(dataPrefix)
 	}
@@ -260,7 +260,7 @@ func (s *SharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 }
 
 func (s *SharedSync) getDataName(source string, seqno uint) enc.Name {
-	dataName := append(s.groupPrefix, *s.dataComp)
+	dataName := append(s.groupPrefix, s.dataComp)
 	src, _ := enc.NameFromStr(source)
 	dataName = append(dataName, src...)
 	dataName = append(dataName, enc.NewSequenceNumComponent(uint64(seqno)))

@@ -70,7 +70,7 @@ func TestStateVectorEncodeDecode(t *testing.T) {
 
 func TestStateVectorDecodeStatic(t *testing.T) {
 	comp, _ := enc.ComponentFromBytes([]byte{201, 24, 202, 10, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 202, 10, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2})
-	sv, _ := svs.ParseStateVector(*comp)
+	sv, _ := svs.ParseStateVector(comp)
 	assert.Equal(t, uint(1), sv.Get("/one"))
 	assert.Equal(t, uint(2), sv.Get("/two"))
 	assert.Equal(t, uint(3), sv.Total())
