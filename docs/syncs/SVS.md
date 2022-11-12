@@ -7,24 +7,25 @@
 </div>
 
 
-#### Helpful Links:
+### Helpful Links:
 * [Technical Report](https://named-data.net/wp-content/uploads/2021/07/ndn-0073-r2-SVS.pdf)
 * [Specification](https://named-data.github.io/StateVectorSync/)
 * [Reference Implementation](https://github.com/named-data/ndn-svs)
 
 
-#### Sync Aspects:
+### Sync Aspects:
 ```
 Dataset Representation: VectorClock
 Communication Model:    Push Notification
 Multicast Usage:        Yes
 Data Naming:            Sequential
+Packet Delivery:        Out-of-order
 Strengths:              Resilient, Low Latency
 Weaknesses:             Scalability, Naming
 ```
 
 
-#### Production Differences:
+### Production Differences:
 The Production branch **is** compatible with the Specification branch.
 
 Differences:

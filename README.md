@@ -23,8 +23,8 @@ about newly published data, effectively synchronizing data in a group.
 
 ***ndn-sync*** contains two main branches with their differences described below:
 
-* [***production***](https://github.com/justincpresley/ndn-sync/tree/production): The master branch which holds Syncs along with any modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
-* [***specification***](https://github.com/justincpresley/ndn-sync/tree/specification): The side branch which holds Syncs in their original form according to their technical specification.
+* [**production**](https://github.com/justincpresley/ndn-sync/tree/production): The master branch which holds Syncs along with any modifications to make them more stable/usable for applications. This branch is actively being served as a Go package.
+* [**specification**](https://github.com/justincpresley/ndn-sync/tree/specification): The side branch which holds Syncs in their original form according to their technical specification.
 
 
 ## Syncs
