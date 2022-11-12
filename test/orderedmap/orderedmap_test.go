@@ -1,7 +1,7 @@
 /*
  This module is a modified version of the original work.
  Original work can be found at:
-          https://github.com/wk8/go-ordered-map
+          github.com/wk8/go-ordered-map
 
  The license provided (copy_of_license.md under /internal/orderedmap)
  covers this file. In addition, the changes or modifications done

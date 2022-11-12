@@ -1,7 +1,7 @@
 /*
  This module is a modified version of the original work.
  Original work can be found at:
-          https://github.com/reddragon/bloomfilter.go
+          github.com/reddragon/bloomfilter.go
 
  No license was provided. However, the changes or modifications
  done are described in changes.md under /internal/bloomfilter.

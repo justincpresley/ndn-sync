@@ -40,16 +40,9 @@ describes many of the Syncs that are currently known and their unique difference
 
 ***ndn-sync*** has the following Syncs implemented:
 
-* `svs` - **StateVectorSync**
+* `svs` - **StateVectorSync**: [Details](/docs/syncs/SVS.md) | [API Documentation](https://pkg.go.dev/github.com/justincpresley/ndn-sync/pkg/svs) | [Examples](/examples/svs/README.md)
 
-
-## Usage
-
-In order to utilize ***ndn-sync***, two prerequisites are needed: [The NDN Forwarding Daemon (NFD)](https://named-data.net/doc/NFD/current/INSTALL.html) and [The Go Programming Language](https://go.dev/dl/).
-
-It is highly recommended that you check out our examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
-
-***ndn-sync***'s API documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/justincpresley/ndn-sync).
+It is highly recommended that you check out the examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
 
 
 ## License
