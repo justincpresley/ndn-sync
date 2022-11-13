@@ -65,7 +65,7 @@ func main() {
 
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	sourceName, _ := enc.NameFromStr(*source)
-	callback := func(source string, seqno uint, data ndn.Data) {
+	callback := func(source string, seqno uint64, data ndn.Data) {
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
 			fmt.Println(source + ": " + string(data.Content().Join()))

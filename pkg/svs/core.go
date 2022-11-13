@@ -117,7 +117,7 @@ func (c *Core) Shutdown() {
 	c.logger.Info("Core Shutdown.")
 }
 
-func (c *Core) SetSeqno(seqno uint) {
+func (c *Core) SetSeqno(seqno uint64) {
 	if seqno <= c.vector.Get(c.sourceStr) {
 		c.logger.Warn("The Core was updated with a lower seqno.")
 		return
@@ -128,7 +128,7 @@ func (c *Core) SetSeqno(seqno uint) {
 	c.scheduler.Skip()
 }
 
-func (c *Core) GetSeqno() uint {
+func (c *Core) GetSeqno() uint64 {
 	return c.vector.Get(c.sourceStr)
 }
 
@@ -202,7 +202,7 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 	defer c.vectorMutex.Unlock()
 	var (
 		missing []MissingData = make([]MissingData, 0)
-		temp    uint
+		temp    uint64
 		isNewer bool
 	)
 	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {

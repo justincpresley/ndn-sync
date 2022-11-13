@@ -36,14 +36,14 @@ type SharedConfig struct {
 	Source       enc.Name
 	GroupPrefix  enc.Name
 	StoragePath  string
-	DataCallback func(source string, seqno uint, data ndn.Data)
+	DataCallback func(source string, seqno uint64, data ndn.Data)
 	// high-level only
 	CacheOthers bool
 	// low-level only
 	UpdateCallback func(sync *SharedSync, missing []MissingData)
 }
 
-func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint, data ndn.Data)) *SharedConfig {
+func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *SharedConfig {
 	return &SharedConfig{
 		Source:       source,
 		GroupPrefix:  group,
@@ -65,9 +65,9 @@ type SharedSync struct {
 	datCfg      *ndn.DataConfig
 	dataComp    enc.Component
 	logger      *log.Entry
-	dataCall    func(source string, seqno uint, data ndn.Data)
+	dataCall    func(source string, seqno uint64, data ndn.Data)
 	updateCall  func(sync *SharedSync, missing []MissingData)
-	fetchQueue  chan func() (string, uint, bool, uint)
+	fetchQueue  chan func() (string, uint64, bool, uint)
 	numFetches  uint // TODO: likely a data race here
 	isListening bool
 }
@@ -86,7 +86,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 	}
 	if config.UpdateCallback == nil {
 		callback = func(missing []MissingData) {
-			var curr uint
+			var curr uint64
 			for _, m := range missing {
 				curr = m.LowSeqno()
 				for curr <= m.HighSeqno() {
@@ -133,7 +133,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
-		fetchQueue: make(chan func() (string, uint, bool, uint), constants.InitialFetchQueueLength),
+		fetchQueue: make(chan func() (string, uint64, bool, uint), constants.InitialFetchQueueLength),
 	}
 	return s
 }
@@ -170,13 +170,13 @@ func (s *SharedSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *SharedSync) FetchData(source string, seqno uint, cache bool) {
+func (s *SharedSync) FetchData(source string, seqno uint64, cache bool) {
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		s.sendInterest(source, seqno, cache, s.constants.DataInterestRetries)
 		s.numFetches++
 		return
 	}
-	s.fetchQueue <- func() (string, uint, bool, uint) { return source, seqno, cache, s.constants.DataInterestRetries }
+	s.fetchQueue <- func() (string, uint64, bool, uint) { return source, seqno, cache, s.constants.DataInterestRetries }
 }
 
 func (s *SharedSync) PublishData(content []byte) {
@@ -209,7 +209,7 @@ func (s *SharedSync) GetCore() *Core {
 	return s.core
 }
 
-func (s *SharedSync) sendInterest(source string, seqno uint, cache bool, retries uint) {
+func (s *SharedSync) sendInterest(source string, seqno uint64, cache bool, retries uint) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
@@ -259,10 +259,10 @@ func (s *SharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *SharedSync) getDataName(source string, seqno uint) enc.Name {
+func (s *SharedSync) getDataName(source string, seqno uint64) enc.Name {
 	dataName := append(s.groupPrefix, s.dataComp)
 	src, _ := enc.NameFromStr(source)
 	dataName = append(dataName, src...)
-	dataName = append(dataName, enc.NewSequenceNumComponent(uint64(seqno)))
+	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
 }
