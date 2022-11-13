@@ -1,8 +1,6 @@
 # Changes Made
 
-Repository: github.com/reddragon/bloomfilter.go
-
-All substantial changes/modifications/additions away from the original repository are documented in this file.
+All substantial changes/modifications/additions away from [the original repository](https://github.com/reddragon/bloomfilter.go) are documented in this file.
 These changes were performed on the original repository at the commit `5c5f79c7342e6d65c9356aecf7c8b4cf30089809`.
 
 ## Added

@@ -36,8 +36,8 @@ import (
 type CoreState uint8
 
 const (
-	CoreStateSteady      CoreState = 0
-	CoreStateSuppression CoreState = 1
+	SteadyState      CoreState = 0
+	SuppressionState CoreState = 1
 )
 
 type CoreConfig struct {
@@ -66,7 +66,7 @@ type Core struct {
 
 func NewCore(app *eng.Engine, config *CoreConfig, constants *Constants) *Core {
 	c := &Core{
-		state:          CoreStateSteady,
+		state:          SteadyState,
 		app:            app,
 		constants:      constants,
 		updateCallback: config.UpdateCallback,
@@ -154,7 +154,7 @@ func (c *Core) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovere
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
-		c.state = CoreStateSuppression
+		c.state = SuppressionState
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
 		if uint(c.scheduler.TimeLeft().Milliseconds()) > delay {
 			c.scheduler.Set(delay)
@@ -166,10 +166,10 @@ func (c *Core) target() {
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
 	localNewer := c.mergeStateVector(c.record)
-	if c.state == CoreStateSteady || localNewer {
+	if c.state == SteadyState || localNewer {
 		c.sendInterest()
 	}
-	c.state = CoreStateSteady
+	c.state = SteadyState
 	c.record = NewStateVector()
 }
 
@@ -224,7 +224,7 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 }
 
 func (c *Core) recordStateVector(incomingVector StateVector) bool {
-	if c.state != CoreStateSuppression {
+	if c.state != SuppressionState {
 		return false
 	}
 	c.recordMutex.Lock()

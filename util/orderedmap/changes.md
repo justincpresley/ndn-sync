@@ -1,8 +1,6 @@
 # Changes Made
 
-Repository: github.com/wk8/go-ordered-map
-
-All substantial changes/modifications/additions away from the original repository are documented in this file.
+All substantial changes/modifications/additions away from [the original repository](https://github.com/wk8/go-ordered-map) are documented in this file.
 These changes were performed on the original repository at the commit `ab40b2b9a64414289e84274611d1fee69e52ff55`.
 
 ## Added

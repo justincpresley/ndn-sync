@@ -17,6 +17,7 @@
 ```
 Dataset Representation: VectorClock
 Communication Model:    Push Notification
+Dataset Range:          Full-data
 Multicast Usage:        Yes
 Data Naming:            Sequential
 Packet Delivery:        Out-of-order
