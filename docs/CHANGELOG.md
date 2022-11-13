@@ -8,12 +8,16 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ## [Unreleased]
 
 ## [v0.0.0-alpha.4] - 2022-11-13
+### Added
 - All Syncs in SVS now implement retries!
+- BloomFilter code. (for future plans)
+
+### Changed
 - Standardize the seqno within SVS to a uint64.
 - Utilize go-ndn's methods for encoding.
 - Exposed all internal through util due to necessary access.
 - Modified to ensure compatibility to go-ndn's latest changes.
-- BloomFilter code. (for future plans)
+
 
 ## [v0.0.0-alpha.3] - 2022-10-26
 ### Changed
