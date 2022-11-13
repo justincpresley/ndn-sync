@@ -6,8 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.4] - 2022-11-13
 - All Syncs in SVS now implement retries!
-- BloomFilter internal code. (for future plans)
+- Standardize the seqno within SVS to a uint64.
+- Utilize go-ndn's methods for encoding.
+- Exposed all internal through util due to necessary access.
+- Modified to ensure compatibility to go-ndn's latest changes.
+- BloomFilter code. (for future plans)
 
 ## [v0.0.0-alpha.3] - 2022-10-26
 ### Changed
@@ -34,7 +40,8 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.3...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.4...HEAD
+[v0.0.0-alpha.4]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.3...v0.0.0-alpha.4
 [v0.0.0-alpha.3]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.2...v0.0.0-alpha.3
 [v0.0.0-alpha.2]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.1...v0.0.0-alpha.2
 [v0.0.0-alpha.1]: https://github.com/justincpresley/ndn-sync/releases/tag/v0.0.0-alpha.1
