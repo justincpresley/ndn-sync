@@ -18,7 +18,6 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 - Exposed all internal through util due to necessary access.
 - Modified to ensure compatibility to go-ndn's latest changes.
 
-
 ## [v0.0.0-alpha.3] - 2022-10-26
 ### Changed
 - SVS: Pulled out init() into its own file.
