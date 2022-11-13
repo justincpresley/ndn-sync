@@ -37,12 +37,12 @@ type NativeConfig struct {
 	GroupPrefix  enc.Name
 	NamingScheme NamingScheme
 	StoragePath  string
-	DataCallback func(source string, seqno uint, data ndn.Data)
+	DataCallback func(source string, seqno uint64, data ndn.Data)
 	// low-level only
 	UpdateCallback func(sync *NativeSync, missing []MissingData)
 }
 
-func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint, data ndn.Data)) *NativeConfig {
+func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *NativeConfig {
 	return &NativeConfig{
 		Source:       source,
 		GroupPrefix:  group,
@@ -65,9 +65,9 @@ type NativeSync struct {
 	datCfg       *ndn.DataConfig
 	dataComp     enc.Component
 	logger       *log.Entry
-	dataCall     func(source string, seqno uint, data ndn.Data)
+	dataCall     func(source string, seqno uint64, data ndn.Data)
 	updateCall   func(sync *NativeSync, missing []MissingData)
-	fetchQueue   chan func() (string, uint)
+	fetchQueue   chan func() (string, uint64, uint)
 	numFetches   uint // TODO: likely a data race here
 	isListening  bool
 }
@@ -86,7 +86,7 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	}
 	if config.UpdateCallback == nil {
 		callback = func(missing []MissingData) {
-			var curr uint
+			var curr uint64
 			for _, m := range missing {
 				curr = m.LowSeqno()
 				for curr <= m.HighSeqno() {
@@ -134,7 +134,7 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
-		fetchQueue: make(chan func() (string, uint), constants.InitialFetchQueueLength),
+		fetchQueue: make(chan func() (string, uint64, uint), constants.InitialFetchQueueLength),
 	}
 	return s
 }
@@ -181,13 +181,13 @@ func (s *NativeSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *NativeSync) FetchData(source string, seqno uint) {
+func (s *NativeSync) FetchData(source string, seqno uint64) {
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
-		s.sendInterest(source, seqno)
+		s.sendInterest(source, seqno, s.constants.DataInterestRetries)
 		s.numFetches++
 		return
 	}
-	s.fetchQueue <- func() (string, uint) { return source, seqno }
+	s.fetchQueue <- func() (string, uint64, uint) { return source, seqno, s.constants.DataInterestRetries }
 }
 
 func (s *NativeSync) PublishData(content []byte) {
@@ -220,7 +220,7 @@ func (s *NativeSync) GetCore() *Core {
 	return s.core
 }
 
-func (s *NativeSync) sendInterest(source string, seqno uint) {
+func (s *NativeSync) sendInterest(source string, seqno uint64, retries uint) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
@@ -228,14 +228,14 @@ func (s *NativeSync) sendInterest(source string, seqno uint) {
 	}
 	err = s.app.Express(finalName, s.intCfg, wire,
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
-			if result == ndn.InterestResultData {
+			if result == ndn.InterestResultData || result == ndn.InterestResultNack || retries == 0 {
 				s.dataCall(source, seqno, data)
+				s.numFetches--
+				s.processQueue()
 			} else {
-				// TODO: implement retry amount
-				s.dataCall(source, seqno, nil)
+				retries--
+				s.sendInterest(source, seqno, retries)
 			}
-			s.numFetches--
-			s.processQueue()
 		})
 	if err != nil {
 		s.logger.Errorf("Unable to send Interest: %+v", err)
@@ -267,7 +267,7 @@ func (s *NativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *NativeSync) getDataName(source string, seqno uint) enc.Name {
+func (s *NativeSync) getDataName(source string, seqno uint64) enc.Name {
 	dataName := append(s.groupPrefix, s.dataComp)
 	src, _ := enc.NameFromStr(source)
 	if s.namingScheme == GroupOrientedNaming {
@@ -275,6 +275,6 @@ func (s *NativeSync) getDataName(source string, seqno uint) enc.Name {
 	} else {
 		dataName = append(src, dataName...)
 	}
-	dataName = append(dataName, enc.NewSequenceNumComponent(uint64(seqno)))
+	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
 }

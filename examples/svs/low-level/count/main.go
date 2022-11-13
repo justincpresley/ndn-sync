@@ -64,7 +64,7 @@ func main() {
 	}
 	defer app.Shutdown()
 
-	dataCall := func(source string, seqno uint, data ndn.Data) {
+	dataCall := func(source string, seqno uint64, data ndn.Data) {
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
 			fmt.Println(source + ": " + string(data.Content().Join()))
@@ -73,7 +73,7 @@ func main() {
 		}
 	}
 	updateCall := func(sync *svs.NativeSync, missing []svs.MissingData) {
-		var curr uint
+		var curr uint64
 		for _, m := range missing {
 			curr = m.LowSeqno()
 			for curr <= m.HighSeqno() {

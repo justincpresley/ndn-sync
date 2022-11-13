@@ -43,7 +43,7 @@ func passAll(enc.Name, enc.Wire, ndn.Signature) bool {
 }
 
 func updateCallback(missing []svs.MissingData) {
-	var temp uint
+	var temp uint64
 	for _, m := range missing {
 		temp = m.LowSeqno()
 		for temp <= m.HighSeqno() {
