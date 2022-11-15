@@ -58,6 +58,7 @@ type Core struct {
 	scheduler      *Scheduler
 	logger         *log.Entry
 	intCfg         *ndn.InterestConfig
+	stateMutex     sync.RWMutex
 	vectorMutex    sync.Mutex
 	recordMutex    sync.Mutex
 	isListening    bool
@@ -154,7 +155,9 @@ func (c *Core) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovere
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
+		c.stateMutex.Lock()
 		c.state = SuppressionState
+		c.stateMutex.Unlock()
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
 		if uint(c.scheduler.TimeLeft().Milliseconds()) > delay {
 			c.scheduler.Set(delay)
@@ -166,6 +169,8 @@ func (c *Core) target() {
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
 	localNewer := c.mergeStateVector(c.record)
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
 	if c.state == SteadyState || localNewer {
 		c.sendInterest()
 	}
@@ -224,9 +229,12 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 }
 
 func (c *Core) recordStateVector(incomingVector StateVector) bool {
+	c.stateMutex.RLock()
 	if c.state != SuppressionState {
+		c.stateMutex.RUnlock()
 		return false
 	}
+	c.stateMutex.RUnlock()
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
 	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {
