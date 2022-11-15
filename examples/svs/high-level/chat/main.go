@@ -23,10 +23,10 @@ package main
 
 import (
 	"flag"
-	"sync"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	log "github.com/apex/log"
 	kyb "github.com/eiannone/keyboard"
