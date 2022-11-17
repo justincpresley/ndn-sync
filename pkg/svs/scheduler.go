@@ -23,6 +23,7 @@ package svs
 
 import (
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -34,6 +35,7 @@ type Scheduler struct {
 	cycle      chan time.Duration
 	startTime  time.Time
 	cycleTime  time.Duration
+	cycleMutex sync.RWMutex
 	timer      *time.Timer
 }
 
@@ -56,19 +58,25 @@ func (s *Scheduler) target(executeNow bool) {
 	if executeNow {
 		s.function()
 	}
+	s.cycleMutex.Lock()
 	s.cycleTime = time.Duration(AddRandomness(s.interval, s.randomness)) * time.Millisecond
 	s.startTime = time.Now()
 	s.timer = time.NewTimer(s.cycleTime)
+	s.cycleMutex.Unlock()
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
+			s.cycleMutex.Lock()
 			s.cycleTime = time.Duration(AddRandomness(s.interval, s.randomness)) * time.Millisecond
 			s.startTime = time.Now()
 			s.timer.Reset(s.cycleTime)
+			s.cycleMutex.Unlock()
 		case temp = <-s.cycle:
+			s.cycleMutex.Lock()
 			s.cycleTime = temp
 			s.startTime = time.Now()
+			s.cycleMutex.Unlock()
 			if !s.timer.Stop() {
 				select {
 				case <-s.timer.C:
@@ -105,10 +113,14 @@ func (s *Scheduler) Set(value uint) {
 }
 
 func (s *Scheduler) Add(value uint) {
+	s.cycleMutex.RLock()
+	defer s.cycleMutex.RUnlock()
 	s.cycle <- (time.Duration(value) * time.Millisecond) + s.cycleTime
 }
 
 func (s *Scheduler) TimeLeft() time.Duration {
+	s.cycleMutex.RLock()
+	defer s.cycleMutex.RUnlock()
 	return time.Until(s.startTime.Add(s.cycleTime))
 }
 
