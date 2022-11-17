@@ -53,6 +53,7 @@ type Core struct {
 	updateCallback func([]MissingData)
 	syncPrefix     enc.Name
 	sourceStr      string
+	sourceSeq      uint64
 	vector         StateVector
 	record         StateVector
 	scheduler      *Scheduler
@@ -119,18 +120,19 @@ func (c *Core) Shutdown() {
 }
 
 func (c *Core) SetSeqno(seqno uint64) {
-	if seqno <= c.vector.Get(c.sourceStr) {
+	if seqno <= c.sourceSeq {
 		c.logger.Warn("The Core was updated with a lower seqno.")
 		return
 	}
 	c.vectorMutex.Lock()
+	c.sourceSeq = seqno
 	c.vector.Set(c.sourceStr, seqno, false)
 	c.vectorMutex.Unlock()
 	c.scheduler.Skip()
 }
 
 func (c *Core) GetSeqno() uint64 {
-	return c.vector.Get(c.sourceStr)
+	return c.sourceSeq
 }
 
 func (c *Core) GetStateVector() StateVector {
@@ -203,13 +205,12 @@ func (c *Core) sendInterest() {
 }
 
 func (c *Core) mergeStateVector(incomingVector StateVector) bool {
-	c.vectorMutex.Lock()
-	defer c.vectorMutex.Unlock()
 	var (
 		missing []MissingData = make([]MissingData, 0)
 		temp    uint64
 		isNewer bool
 	)
+	c.vectorMutex.Lock()
 	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {
 		temp = c.vector.Get(pair.Key)
 		if temp < pair.Value {
@@ -222,6 +223,7 @@ func (c *Core) mergeStateVector(incomingVector StateVector) bool {
 	if incomingVector.Len() < c.vector.Len() {
 		isNewer = true
 	}
+	c.vectorMutex.Unlock()
 	if len(missing) != 0 {
 		c.updateCallback(missing)
 	}

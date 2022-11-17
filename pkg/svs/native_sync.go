@@ -22,6 +22,7 @@
 package svs
 
 import (
+	"sync"
 	"time"
 
 	log "github.com/apex/log"
@@ -53,23 +54,24 @@ func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source 
 }
 
 type NativeSync struct {
-	app          *eng.Engine
-	core         *Core
-	constants    *Constants
-	namingScheme NamingScheme
-	groupPrefix  enc.Name
-	source       enc.Name
-	sourceStr    string
-	storage      Database
-	intCfg       *ndn.InterestConfig
-	datCfg       *ndn.DataConfig
-	dataComp     enc.Component
-	logger       *log.Entry
-	dataCall     func(source string, seqno uint64, data ndn.Data)
-	updateCall   func(sync *NativeSync, missing []MissingData)
-	fetchQueue   chan func() (string, uint64, uint)
-	numFetches   uint // TODO: a data race here
-	isListening  bool
+	app             *eng.Engine
+	core            *Core
+	constants       *Constants
+	namingScheme    NamingScheme
+	groupPrefix     enc.Name
+	source          enc.Name
+	sourceStr       string
+	storage         Database
+	intCfg          *ndn.InterestConfig
+	datCfg          *ndn.DataConfig
+	dataComp        enc.Component
+	logger          *log.Entry
+	dataCall        func(source string, seqno uint64, data ndn.Data)
+	updateCall      func(sync *NativeSync, missing []MissingData)
+	fetchQueue      chan func() (string, uint64, uint)
+	numFetches      uint
+	numFetchesMutex sync.Mutex
+	isListening     bool
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *NativeSync {
@@ -182,11 +184,14 @@ func (s *NativeSync) Shutdown() {
 }
 
 func (s *NativeSync) FetchData(source string, seqno uint64) {
+	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
-		s.sendInterest(source, seqno, s.constants.DataInterestRetries)
 		s.numFetches++
+		s.numFetchesMutex.Unlock()
+		s.sendInterest(source, seqno, s.constants.DataInterestRetries)
 		return
 	}
+	s.numFetchesMutex.Unlock()
 	s.fetchQueue <- func() (string, uint64, uint) { return source, seqno, s.constants.DataInterestRetries }
 }
 
@@ -230,7 +235,9 @@ func (s *NativeSync) sendInterest(source string, seqno uint64, retries uint) {
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
 			if result == ndn.InterestResultData || result == ndn.InterestResultNack || retries == 0 {
 				s.dataCall(source, seqno, data)
+				s.numFetchesMutex.Lock()
 				s.numFetches--
+				s.numFetchesMutex.Unlock()
 				s.processQueue()
 			} else {
 				retries--
@@ -244,15 +251,18 @@ func (s *NativeSync) sendInterest(source string, seqno uint64, retries uint) {
 }
 
 func (s *NativeSync) processQueue() {
+	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		select {
 		case f := <-s.fetchQueue:
-			s.sendInterest(f())
 			s.numFetches++
-		default:
+			s.numFetchesMutex.Unlock()
+			s.sendInterest(f())
 			return
+		default:
 		}
 	}
+	s.numFetchesMutex.Unlock()
 }
 
 func (s *NativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
