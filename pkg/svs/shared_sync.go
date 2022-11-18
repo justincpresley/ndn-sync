@@ -56,7 +56,7 @@ func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source 
 
 type SharedSync struct {
 	app             *eng.Engine
-	core            *Core
+	core            Core
 	constants       *Constants
 	groupPrefix     enc.Name
 	source          enc.Name
@@ -215,7 +215,7 @@ func (s *SharedSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *SharedSync) GetCore() *Core {
+func (s *SharedSync) GetCore() Core {
 	return s.core
 }
 

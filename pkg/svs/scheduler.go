@@ -27,7 +27,17 @@ import (
 	"time"
 )
 
-type Scheduler struct {
+type Scheduler interface {
+	Start(bool)
+	Stop()
+	Skip()
+	Reset()
+	Set(uint)
+	Add(uint)
+	TimeLeft() time.Duration
+}
+
+type scheduler struct {
 	function   func()
 	interval   uint
 	randomness float32
@@ -39,8 +49,8 @@ type Scheduler struct {
 	timer      *time.Timer
 }
 
-func NewScheduler(function func(), interval uint, randomness float32) *Scheduler {
-	return &Scheduler{
+func NewScheduler(function func(), interval uint, randomness float32) Scheduler {
+	return &scheduler{
 		function:   function,
 		interval:   interval,
 		randomness: randomness,
@@ -49,11 +59,11 @@ func NewScheduler(function func(), interval uint, randomness float32) *Scheduler
 	}
 }
 
-func (s *Scheduler) Start(executeNow bool) {
+func (s *scheduler) Start(executeNow bool) {
 	go s.target(executeNow)
 }
 
-func (s *Scheduler) target(executeNow bool) {
+func (s *scheduler) target(executeNow bool) {
 	var temp time.Duration
 	if executeNow {
 		s.function()
@@ -96,29 +106,29 @@ func (s *Scheduler) target(executeNow bool) {
 	}
 }
 
-func (s *Scheduler) Stop() {
+func (s *scheduler) Stop() {
 	s.quit <- struct{}{}
 }
 
-func (s *Scheduler) Skip() {
+func (s *scheduler) Skip() {
 	s.cycle <- time.Duration(0)
 }
 
-func (s *Scheduler) Reset() {
+func (s *scheduler) Reset() {
 	s.cycle <- time.Duration(AddRandomness(s.interval, s.randomness)) * time.Millisecond
 }
 
-func (s *Scheduler) Set(value uint) {
+func (s *scheduler) Set(value uint) {
 	s.cycle <- time.Duration(value) * time.Millisecond
 }
 
-func (s *Scheduler) Add(value uint) {
+func (s *scheduler) Add(value uint) {
 	s.cycleMutex.RLock()
 	defer s.cycleMutex.RUnlock()
 	s.cycle <- (time.Duration(value) * time.Millisecond) + s.cycleTime
 }
 
-func (s *Scheduler) TimeLeft() time.Duration {
+func (s *scheduler) TimeLeft() time.Duration {
 	s.cycleMutex.RLock()
 	defer s.cycleMutex.RUnlock()
 	return time.Until(s.startTime.Add(s.cycleTime))

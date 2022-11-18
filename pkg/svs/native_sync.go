@@ -55,7 +55,7 @@ func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source 
 
 type NativeSync struct {
 	app             *eng.Engine
-	core            *Core
+	core            Core
 	constants       *Constants
 	namingScheme    NamingScheme
 	groupPrefix     enc.Name
@@ -226,7 +226,7 @@ func (s *NativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *NativeSync) GetCore() *Core {
+func (s *NativeSync) GetCore() Core {
 	return s.core
 }
 
