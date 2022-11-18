@@ -9,7 +9,7 @@
  credit should be given to the original author.
 */
 
-package bloomfilter
+package bloomfilter_test
 
 import (
 	"testing"

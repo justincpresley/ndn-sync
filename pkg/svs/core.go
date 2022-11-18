@@ -113,8 +113,14 @@ func (c *Core) Shutdown() {
 		c.scheduler.Stop()
 	}
 	if c.isListening {
-		c.app.DetachHandler(c.syncPrefix)
-		c.app.UnregisterRoute(c.syncPrefix)
+		err := c.app.DetachHandler(c.syncPrefix)
+		if err != nil {
+			c.logger.Errorf("Detech handler error: %+v", err)
+		}
+		err = c.app.UnregisterRoute(c.syncPrefix)
+		if err != nil {
+			c.logger.Errorf("Unregister route error: %+v", err)
+		}
 	}
 	c.logger.Info("Core Shutdown.")
 }

@@ -112,9 +112,8 @@ func (sv stateVector) Set(source string, seqno uint64, old bool) {
 func (sv stateVector) Get(source string) uint64 {
 	if val, pres := sv.entries.Get(source); pres {
 		return val
-	} else {
-		return 0
 	}
+	return 0
 }
 
 func (sv stateVector) String() string {

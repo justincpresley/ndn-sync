@@ -10,7 +10,7 @@
  credit should be given to the original author.
 */
 
-package orderedmap
+package orderedmap_test
 
 import (
 	"encoding/hex"

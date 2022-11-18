@@ -100,7 +100,6 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 	} else {
 		callback = func(missing []MissingData) {
 			s.updateCall(s, missing)
-			return
 		}
 	}
 
@@ -166,8 +165,14 @@ func (s *SharedSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
 		dataPrefix := append(s.groupPrefix, s.dataComp)
-		s.app.DetachHandler(dataPrefix)
-		s.app.UnregisterRoute(dataPrefix)
+		err := s.app.DetachHandler(dataPrefix)
+		if err != nil {
+			s.logger.Errorf("Detech handler error: %+v", err)
+		}
+		err = s.app.UnregisterRoute(dataPrefix)
+		if err != nil {
+			s.logger.Errorf("Unregister route error: %+v", err)
+		}
 	}
 	s.logger.Info("Sync Shutdown.")
 }
@@ -258,10 +263,10 @@ func (s *SharedSync) processQueue() {
 }
 
 func (s *SharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
-	data_pkt := s.storage.Get(interest.Name().Bytes())
-	if data_pkt != nil {
+	dataPkt := s.storage.Get(interest.Name().Bytes())
+	if dataPkt != nil {
 		s.logger.Info("Serving data " + interest.Name().String())
-		err := reply(enc.Wire{data_pkt})
+		err := reply(enc.Wire{dataPkt})
 		if err != nil {
 			s.logger.Errorf("unable to reply with data: %+v", err)
 			return

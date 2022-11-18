@@ -19,7 +19,7 @@
           https://github.com/justincpresley/ndn-sync
 */
 
-package svs
+package svs_test
 
 import (
 	"testing"
@@ -35,7 +35,7 @@ func TestCoreInitialState(t *testing.T) {
 	config := &svs.CoreConfig{
 		Source:         nid,
 		SyncPrefix:     syncPrefix,
-		UpdateCallback: func(missing []svs.MissingData) { return },
+		UpdateCallback: func(missing []svs.MissingData) {},
 	}
 	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
 	assert.Equal(t, uint64(0), core.GetSeqno())

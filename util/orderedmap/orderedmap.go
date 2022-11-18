@@ -13,7 +13,6 @@
 // Package orderedmap implements an ordered map,
 // i.e. a map that also keeps track of the order
 // in which keys were inserted.
-
 package orderedmap
 
 import (

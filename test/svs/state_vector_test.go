@@ -19,7 +19,7 @@
           https://github.com/justincpresley/ndn-sync
 */
 
-package svs
+package svs_test
 
 import (
 	"testing"
