@@ -33,27 +33,7 @@ import (
 	utl "github.com/zjkmxy/go-ndn/pkg/utils"
 )
 
-type NativeConfig struct {
-	Source       enc.Name
-	GroupPrefix  enc.Name
-	NamingScheme NamingScheme
-	StoragePath  string
-	DataCallback func(source string, seqno uint64, data ndn.Data)
-	// low-level only
-	UpdateCallback func(sync *NativeSync, missing []MissingData)
-}
-
-func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *NativeConfig {
-	return &NativeConfig{
-		Source:       source,
-		GroupPrefix:  group,
-		NamingScheme: HostOrientedNaming,
-		StoragePath:  "./" + source.String() + "_bolt.db",
-		DataCallback: callback,
-	}
-}
-
-type NativeSync struct {
+type nativeSync struct {
 	app             *eng.Engine
 	core            Core
 	constants       *Constants
@@ -67,15 +47,15 @@ type NativeSync struct {
 	dataComp        enc.Component
 	logger          *log.Entry
 	dataCall        func(source string, seqno uint64, data ndn.Data)
-	updateCall      func(sync *NativeSync, missing []MissingData)
+	updateCall      func(sync NativeSync, missing []MissingData)
 	fetchQueue      chan func() (string, uint64, uint)
 	numFetches      uint
 	numFetchesMutex sync.Mutex
 	isListening     bool
 }
 
-func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *NativeSync {
-	var s *NativeSync
+func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *nativeSync {
+	var s *nativeSync
 	var callback func(missing []MissingData)
 	logger := log.WithField("module", "svs")
 	syncComp, _ := enc.ComponentFromStr("sync")
@@ -113,7 +93,7 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		logger.Errorf("Unable to create storage: %+v", err)
 		return nil
 	}
-	s = &NativeSync{
+	s = &nativeSync{
 		app:          app,
 		core:         NewCore(app, coreConfig, constants),
 		constants:    constants,
@@ -140,7 +120,7 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	return s
 }
 
-func (s *NativeSync) Listen() {
+func (s *nativeSync) Listen() {
 	dataPrefix := append(s.groupPrefix, s.dataComp)
 	if s.namingScheme == GroupOrientedNaming {
 		dataPrefix = append(dataPrefix, s.source...)
@@ -162,12 +142,12 @@ func (s *NativeSync) Listen() {
 	s.core.Listen()
 }
 
-func (s *NativeSync) Activate(immediateStart bool) {
+func (s *nativeSync) Activate(immediateStart bool) {
 	s.core.Activate(immediateStart)
 	s.logger.Info("Sync Activated.")
 }
 
-func (s *NativeSync) Shutdown() {
+func (s *nativeSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
 		dataPrefix := append(s.groupPrefix, s.dataComp)
@@ -188,7 +168,7 @@ func (s *NativeSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *NativeSync) FetchData(source string, seqno uint64) {
+func (s *nativeSync) FetchData(source string, seqno uint64) {
 	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		s.numFetches++
@@ -200,7 +180,7 @@ func (s *NativeSync) FetchData(source string, seqno uint64) {
 	s.fetchQueue <- func() (string, uint64, uint) { return source, seqno, s.constants.DataInterestRetries }
 }
 
-func (s *NativeSync) PublishData(content []byte) {
+func (s *nativeSync) PublishData(content []byte) {
 	seqno := s.core.GetSeqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
@@ -222,15 +202,15 @@ func (s *NativeSync) PublishData(content []byte) {
 	s.core.SetSeqno(seqno)
 }
 
-func (s *NativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
+func (s *nativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *NativeSync) GetCore() Core {
+func (s *nativeSync) GetCore() Core {
 	return s.core
 }
 
-func (s *NativeSync) sendInterest(source string, seqno uint64, retries uint) {
+func (s *nativeSync) sendInterest(source string, seqno uint64, retries uint) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
@@ -255,7 +235,7 @@ func (s *NativeSync) sendInterest(source string, seqno uint64, retries uint) {
 	}
 }
 
-func (s *NativeSync) processQueue() {
+func (s *nativeSync) processQueue() {
 	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		select {
@@ -270,7 +250,7 @@ func (s *NativeSync) processQueue() {
 	s.numFetchesMutex.Unlock()
 }
 
-func (s *NativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
+func (s *nativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	dataPkt := s.storage.Get(interest.Name().Bytes())
 	if dataPkt != nil {
 		s.logger.Info("Serving data " + interest.Name().String())
@@ -282,7 +262,7 @@ func (s *NativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *NativeSync) getDataName(source string, seqno uint64) enc.Name {
+func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 	dataName := append(s.groupPrefix, s.dataComp)
 	src, _ := enc.NameFromStr(source)
 	if s.namingScheme == GroupOrientedNaming {

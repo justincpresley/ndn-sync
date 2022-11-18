@@ -33,28 +33,7 @@ import (
 	utl "github.com/zjkmxy/go-ndn/pkg/utils"
 )
 
-type SharedConfig struct {
-	Source       enc.Name
-	GroupPrefix  enc.Name
-	StoragePath  string
-	DataCallback func(source string, seqno uint64, data ndn.Data)
-	// high-level only
-	CacheOthers bool
-	// low-level only
-	UpdateCallback func(sync *SharedSync, missing []MissingData)
-}
-
-func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *SharedConfig {
-	return &SharedConfig{
-		Source:       source,
-		GroupPrefix:  group,
-		StoragePath:  "./" + source.String() + "_bolt.db",
-		DataCallback: callback,
-		CacheOthers:  true,
-	}
-}
-
-type SharedSync struct {
+type sharedSync struct {
 	app             *eng.Engine
 	core            Core
 	constants       *Constants
@@ -67,15 +46,15 @@ type SharedSync struct {
 	dataComp        enc.Component
 	logger          *log.Entry
 	dataCall        func(source string, seqno uint64, data ndn.Data)
-	updateCall      func(sync *SharedSync, missing []MissingData)
+	updateCall      func(sync SharedSync, missing []MissingData)
 	fetchQueue      chan func() (string, uint64, bool, uint)
 	numFetches      uint
 	numFetchesMutex sync.Mutex
 	isListening     bool
 }
 
-func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) *SharedSync {
-	var s *SharedSync
+func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) *sharedSync {
+	var s *sharedSync
 	var callback func(missing []MissingData)
 	logger := log.WithField("module", "svs")
 	syncComp, _ := enc.ComponentFromStr("sync")
@@ -113,7 +92,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		logger.Errorf("Unable to create storage: %+v", err)
 		return nil
 	}
-	s = &SharedSync{
+	s = &sharedSync{
 		app:         app,
 		core:        NewCore(app, coreConfig, constants),
 		constants:   constants,
@@ -139,7 +118,7 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 	return s
 }
 
-func (s *SharedSync) Listen() {
+func (s *sharedSync) Listen() {
 	dataPrefix := append(s.groupPrefix, s.dataComp)
 	err := s.app.AttachHandler(dataPrefix, s.onInterest)
 	if err != nil {
@@ -156,12 +135,12 @@ func (s *SharedSync) Listen() {
 	s.core.Listen()
 }
 
-func (s *SharedSync) Activate(immediateStart bool) {
+func (s *sharedSync) Activate(immediateStart bool) {
 	s.core.Activate(immediateStart)
 	s.logger.Info("Sync Activated.")
 }
 
-func (s *SharedSync) Shutdown() {
+func (s *sharedSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
 		dataPrefix := append(s.groupPrefix, s.dataComp)
@@ -177,7 +156,7 @@ func (s *SharedSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *SharedSync) FetchData(source string, seqno uint64, cache bool) {
+func (s *sharedSync) FetchData(source string, seqno uint64, cache bool) {
 	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		s.numFetches++
@@ -189,7 +168,7 @@ func (s *SharedSync) FetchData(source string, seqno uint64, cache bool) {
 	s.fetchQueue <- func() (string, uint64, bool, uint) { return source, seqno, cache, s.constants.DataInterestRetries }
 }
 
-func (s *SharedSync) PublishData(content []byte) {
+func (s *sharedSync) PublishData(content []byte) {
 	seqno := s.core.GetSeqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
@@ -211,15 +190,15 @@ func (s *SharedSync) PublishData(content []byte) {
 	s.core.SetSeqno(seqno)
 }
 
-func (s *SharedSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
+func (s *sharedSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *SharedSync) GetCore() Core {
+func (s *sharedSync) GetCore() Core {
 	return s.core
 }
 
-func (s *SharedSync) sendInterest(source string, seqno uint64, cache bool, retries uint) {
+func (s *sharedSync) sendInterest(source string, seqno uint64, cache bool, retries uint) {
 	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
@@ -247,7 +226,7 @@ func (s *SharedSync) sendInterest(source string, seqno uint64, cache bool, retri
 	}
 }
 
-func (s *SharedSync) processQueue() {
+func (s *sharedSync) processQueue() {
 	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		select {
@@ -262,7 +241,7 @@ func (s *SharedSync) processQueue() {
 	s.numFetchesMutex.Unlock()
 }
 
-func (s *SharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
+func (s *sharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	dataPkt := s.storage.Get(interest.Name().Bytes())
 	if dataPkt != nil {
 		s.logger.Info("Serving data " + interest.Name().String())
@@ -274,7 +253,7 @@ func (s *SharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *SharedSync) getDataName(source string, seqno uint64) enc.Name {
+func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 	dataName := append(s.groupPrefix, s.dataComp)
 	src, _ := enc.NameFromStr(source)
 	dataName = append(dataName, src...)

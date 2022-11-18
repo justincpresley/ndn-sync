@@ -72,7 +72,7 @@ func main() {
 			fmt.Println("Unfetchable")
 		}
 	}
-	updateCall := func(sync *svs.NativeSync, missing []svs.MissingData) {
+	updateCall := func(sync svs.NativeSync, missing []svs.MissingData) {
 		var curr uint64
 		for _, m := range missing {
 			curr = m.LowSeqno()
