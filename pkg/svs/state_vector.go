@@ -196,7 +196,7 @@ func (sv stateVector) EncodeInto(buf []byte, ls []int) int {
 		// seqno
 		off += TypeEntrySeqno.EncodeInto(buf[pos+off:])
 		off += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodeInto(buf[pos+off:])
-		off += enc.Nat(p.Value).EncodeInto(buf[pos+off:])
+		enc.Nat(p.Value).EncodeInto(buf[pos+off:])
 		// entry
 		pos += TypeEntry.EncodeInto(buf[pos:])
 		pos += enc.TLNum(el).EncodeInto(buf[pos:])

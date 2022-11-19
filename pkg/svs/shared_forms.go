@@ -30,13 +30,13 @@ import (
 )
 
 type SharedSync interface {
-  Listen()
-  Activate(bool)
-  Shutdown()
-  FetchData(string, uint64, bool)
-  PublishData([]byte)
-  FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
-  GetCore() Core
+	Listen()
+	Activate(bool)
+	Shutdown()
+	FetchData(string, uint64, bool)
+	PublishData([]byte)
+	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
+	GetCore() Core
 }
 
 type SharedConfig struct {
