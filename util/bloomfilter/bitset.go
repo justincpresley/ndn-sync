@@ -3,6 +3,7 @@ package bloomfilter
 import (
 	"bufio"
 	"bytes"
+	"io"
 )
 
 type bitset struct {
@@ -56,7 +57,7 @@ func (b *bitset) clear() {
 	b.set = make([]uint8, (b.len+7)/8)
 }
 
-func (b *bitset) writeTo(stream *bytes.Buffer) error {
+func (b *bitset) writeTo(stream io.Writer) error {
 	writer := bufio.NewWriter(stream)
 	// pad len
 	if err := writer.WriteByte(byte(8 - (b.len % 8))); err != nil {

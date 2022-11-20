@@ -6,8 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
-- Eliminated 6+ (all that are known) data races found in SVS.
+
+## [v0.0.0-alpha.5] - 2022-11-19
+### Changed
 - StateVector encoding optimization, entry lengths are reused.
+- Interfaced Scheduler, Core, and all Syncs within SVS.
+- Consolidated small files in SVS.
+- Other small changes.
+
+### Security
+- Eliminated 6+ (all that are known) data races found in SVS.
 
 ## [v0.0.0-alpha.4] - 2022-11-13
 ### Added
