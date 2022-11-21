@@ -23,6 +23,7 @@ package svs
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/apex/log"
@@ -34,7 +35,7 @@ import (
 )
 
 type twoStateCore struct {
-	state          CoreState
+	state          *CoreState
 	app            *eng.Engine
 	constants      *Constants
 	updateCallback func([]MissingData)
@@ -46,7 +47,6 @@ type twoStateCore struct {
 	scheduler      Scheduler
 	logger         *log.Entry
 	intCfg         *ndn.InterestConfig
-	stateMutex     sync.RWMutex
 	vectorMutex    sync.Mutex
 	recordMutex    sync.Mutex
 	isListening    bool
@@ -55,7 +55,7 @@ type twoStateCore struct {
 
 func newTwoStateCore(app *eng.Engine, config *CoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
-		state:          SteadyState,
+		state:          new(CoreState),
 		app:            app,
 		constants:      constants,
 		updateCallback: config.UpdateCallback,
@@ -150,9 +150,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
-		c.stateMutex.Lock()
-		c.state = SuppressionState
-		c.stateMutex.Unlock()
+		atomic.StoreInt32((*int32)(c.state), int32(SuppressionState))
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
 		if uint(c.scheduler.TimeLeft().Milliseconds()) > delay {
 			c.scheduler.Set(delay)
@@ -164,12 +162,10 @@ func (c *twoStateCore) target() {
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
 	localNewer := c.mergeStateVector(c.record)
-	c.stateMutex.Lock()
-	defer c.stateMutex.Unlock()
-	if c.state == SteadyState || localNewer {
+	if atomic.LoadInt32((*int32)(c.state)) == int32(SteadyState) || localNewer {
 		c.sendInterest()
 	}
-	c.state = SteadyState
+	atomic.StoreInt32((*int32)(c.state), int32(SteadyState))
 	c.record = NewStateVector()
 }
 
@@ -224,12 +220,9 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 }
 
 func (c *twoStateCore) recordStateVector(incomingVector StateVector) bool {
-	c.stateMutex.RLock()
-	if c.state != SuppressionState {
-		c.stateMutex.RUnlock()
+	if atomic.LoadInt32((*int32)(c.state)) != int32(SuppressionState) {
 		return false
 	}
-	c.stateMutex.RUnlock()
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
 	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {

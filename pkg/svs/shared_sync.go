@@ -48,7 +48,7 @@ type sharedSync struct {
 	dataCall    func(source string, seqno uint64, data ndn.Data)
 	updateCall  func(sync SharedSync, missing []MissingData)
 	fetchQueue  chan func() (string, uint64, bool, uint)
-	numFetches  int32
+	numFetches  *int32
 	isListening bool
 }
 
@@ -113,6 +113,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
 		fetchQueue: make(chan func() (string, uint64, bool, uint), constants.InitialFetchQueueLength),
+		numFetches: new(int32),
 	}
 	return s
 }
@@ -156,8 +157,8 @@ func (s *sharedSync) Shutdown() {
 }
 
 func (s *sharedSync) FetchData(source string, seqno uint64, cache bool) {
-	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
-		atomic.AddInt32(&s.numFetches, 1)
+	if s.constants.MaxConcurrentDataInterests == 0 || atomic.LoadInt32(s.numFetches) < s.constants.MaxConcurrentDataInterests {
+		atomic.AddInt32(s.numFetches, 1)
 		s.sendInterest(source, seqno, cache, s.constants.DataInterestRetries)
 		return
 	}
@@ -207,7 +208,7 @@ func (s *sharedSync) sendInterest(source string, seqno uint64, cache bool, retri
 					s.storage.Set(finalName.Bytes(), rawData.Join())
 				}
 				s.dataCall(source, seqno, data)
-				atomic.AddInt32(&s.numFetches, -1)
+				atomic.AddInt32(s.numFetches, -1)
 				s.processQueue()
 			} else {
 				retries--
@@ -221,10 +222,10 @@ func (s *sharedSync) sendInterest(source string, seqno uint64, cache bool, retri
 }
 
 func (s *sharedSync) processQueue() {
-	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
+	if s.constants.MaxConcurrentDataInterests == 0 || atomic.LoadInt32(s.numFetches) < s.constants.MaxConcurrentDataInterests {
 		select {
 		case f := <-s.fetchQueue:
-			atomic.AddInt32(&s.numFetches, 1)
+			atomic.AddInt32(s.numFetches, 1)
 			s.sendInterest(f())
 			return
 		default:

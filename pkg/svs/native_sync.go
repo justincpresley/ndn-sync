@@ -49,7 +49,7 @@ type nativeSync struct {
 	dataCall     func(source string, seqno uint64, data ndn.Data)
 	updateCall   func(sync NativeSync, missing []MissingData)
 	fetchQueue   chan func() (string, uint64, uint)
-	numFetches   int32
+	numFetches   *int32
 	isListening  bool
 }
 
@@ -115,6 +115,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
 		fetchQueue: make(chan func() (string, uint64, uint), constants.InitialFetchQueueLength),
+		numFetches: new(int32),
 	}
 	return s
 }
@@ -168,8 +169,8 @@ func (s *nativeSync) Shutdown() {
 }
 
 func (s *nativeSync) FetchData(source string, seqno uint64) {
-	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
-		atomic.AddInt32(&s.numFetches, 1)
+	if s.constants.MaxConcurrentDataInterests == 0 || atomic.LoadInt32(s.numFetches) < s.constants.MaxConcurrentDataInterests {
+		atomic.AddInt32(s.numFetches, 1)
 		s.sendInterest(source, seqno, s.constants.DataInterestRetries)
 		return
 	}
@@ -216,7 +217,7 @@ func (s *nativeSync) sendInterest(source string, seqno uint64, retries uint) {
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
 			if result == ndn.InterestResultData || result == ndn.InterestResultNack || retries == 0 {
 				s.dataCall(source, seqno, data)
-				atomic.AddInt32(&s.numFetches, -1)
+				atomic.AddInt32(s.numFetches, -1)
 				s.processQueue()
 			} else {
 				retries--
@@ -230,10 +231,10 @@ func (s *nativeSync) sendInterest(source string, seqno uint64, retries uint) {
 }
 
 func (s *nativeSync) processQueue() {
-	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
+	if s.constants.MaxConcurrentDataInterests == 0 || atomic.LoadInt32(s.numFetches) < s.constants.MaxConcurrentDataInterests {
 		select {
 		case f := <-s.fetchQueue:
-			atomic.AddInt32(&s.numFetches, 1)
+			atomic.AddInt32(s.numFetches, 1)
 			s.sendInterest(f())
 			return
 		default:
