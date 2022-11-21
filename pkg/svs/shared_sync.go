@@ -22,7 +22,7 @@
 package svs
 
 import (
-	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/apex/log"
@@ -34,23 +34,22 @@ import (
 )
 
 type sharedSync struct {
-	app             *eng.Engine
-	core            Core
-	constants       *Constants
-	groupPrefix     enc.Name
-	source          enc.Name
-	sourceStr       string
-	storage         Database
-	intCfg          *ndn.InterestConfig
-	datCfg          *ndn.DataConfig
-	dataComp        enc.Component
-	logger          *log.Entry
-	dataCall        func(source string, seqno uint64, data ndn.Data)
-	updateCall      func(sync SharedSync, missing []MissingData)
-	fetchQueue      chan func() (string, uint64, bool, uint)
-	numFetches      uint
-	numFetchesMutex sync.Mutex
-	isListening     bool
+	app         *eng.Engine
+	core        Core
+	constants   *Constants
+	groupPrefix enc.Name
+	source      enc.Name
+	sourceStr   string
+	storage     Database
+	intCfg      *ndn.InterestConfig
+	datCfg      *ndn.DataConfig
+	dataComp    enc.Component
+	logger      *log.Entry
+	dataCall    func(source string, seqno uint64, data ndn.Data)
+	updateCall  func(sync SharedSync, missing []MissingData)
+	fetchQueue  chan func() (string, uint64, bool, uint)
+	numFetches  int32
+	isListening bool
 }
 
 func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) *sharedSync {
@@ -157,14 +156,11 @@ func (s *sharedSync) Shutdown() {
 }
 
 func (s *sharedSync) FetchData(source string, seqno uint64, cache bool) {
-	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
-		s.numFetches++
-		s.numFetchesMutex.Unlock()
+		atomic.AddInt32(&s.numFetches, 1)
 		s.sendInterest(source, seqno, cache, s.constants.DataInterestRetries)
 		return
 	}
-	s.numFetchesMutex.Unlock()
 	s.fetchQueue <- func() (string, uint64, bool, uint) { return source, seqno, cache, s.constants.DataInterestRetries }
 }
 
@@ -211,9 +207,7 @@ func (s *sharedSync) sendInterest(source string, seqno uint64, cache bool, retri
 					s.storage.Set(finalName.Bytes(), rawData.Join())
 				}
 				s.dataCall(source, seqno, data)
-				s.numFetchesMutex.Lock()
-				s.numFetches--
-				s.numFetchesMutex.Unlock()
+				atomic.AddInt32(&s.numFetches, -1)
 				s.processQueue()
 			} else {
 				retries--
@@ -227,18 +221,15 @@ func (s *sharedSync) sendInterest(source string, seqno uint64, cache bool, retri
 }
 
 func (s *sharedSync) processQueue() {
-	s.numFetchesMutex.Lock()
 	if s.constants.MaxConcurrentDataInterests == 0 || s.numFetches < s.constants.MaxConcurrentDataInterests {
 		select {
 		case f := <-s.fetchQueue:
-			s.numFetches++
-			s.numFetchesMutex.Unlock()
+			atomic.AddInt32(&s.numFetches, 1)
 			s.sendInterest(f())
 			return
 		default:
 		}
 	}
-	s.numFetchesMutex.Unlock()
 }
 
 func (s *sharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {

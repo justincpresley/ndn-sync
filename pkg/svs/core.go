@@ -29,7 +29,7 @@ import (
 	ndn "github.com/zjkmxy/go-ndn/pkg/ndn"
 )
 
-type CoreState uint8
+type CoreState int32
 
 const (
 	SteadyState      CoreState = 0

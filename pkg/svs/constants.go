@@ -30,7 +30,7 @@ type Constants struct {
 	DataInterestRetries        uint    // 0 = no retry
 	DataPacketFressness        uint    // (ms) milliseconds
 	SyncInterestLifeTime       uint    // (ms) milliseconds
-	MaxConcurrentDataInterests uint    // 0 = inf
+	MaxConcurrentDataInterests int32   // 0 = inf
 	InitialFetchQueueLength    uint    // only helps to mitigate allocation resizing
 }
 

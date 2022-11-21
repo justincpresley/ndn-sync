@@ -1,4 +1,4 @@
-## svs: The StateVectorSync Protocol
+# svs: The StateVectorSync Protocol
 
 <div align="center">
 
