@@ -26,6 +26,4 @@ import (
 	"time"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+func init() { rand.Seed(time.Now().UnixNano()) }
