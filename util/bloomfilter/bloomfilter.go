@@ -7,10 +7,10 @@
  done are described in changes.md.
  I do not claim ownership or creation of this module. All
  credit should be given to the original author.
-
- Copyright (c) 2013, Gaurav Menghani
- All rights reserved.
 */
+
+// Copyright (c) 2013, Gaurav Menghani
+// All rights reserved.
 
 package bloomfilter
 
@@ -22,8 +22,6 @@ import (
 	xxhash3 "github.com/zeebo/xxh3"
 )
 
-// The standard bloom-filter, which allows adding of
-// elements, and checking for their existence
 type Filter struct {
 	k      uint        // Number of hash functions
 	m      uint        // Size of the bloom-filter
@@ -32,9 +30,6 @@ type Filter struct {
 	bitmap *bitset     // The bloom-filter bitmap
 }
 
-// Returns a new Filter object, if you pass the
-// number of Hash Functions to use and the maximum
-// size of the bloom-filter
 func NewFilter(numHashFuncs uint, bfSize uint) *Filter {
 	return &Filter{
 		k:      numHashFuncs,
@@ -45,7 +40,6 @@ func NewFilter(numHashFuncs uint, bfSize uint) *Filter {
 	}
 }
 
-// Parses bytes into a bloom-filter
 func ParseFilter(b []byte) (*Filter, error) {
 	k := uint(b[0])
 	bs, err := parseBitset(b[1:])
@@ -85,7 +79,6 @@ func (f *Filter) setIndexes(d []byte) {
 	}
 }
 
-// Adds an element (in byte-array form) to the bloom-filter
 func (f *Filter) Add(d []byte) {
 	f.setIndexes(d)
 	for _, idx := range f.idxes {
@@ -93,8 +86,6 @@ func (f *Filter) Add(d []byte) {
 	}
 }
 
-// Checks if an element (in byte-array form) exists in the
-// bloom-filter
 func (f *Filter) Check(d []byte) bool {
 	f.setIndexes(d)
 	result := true
@@ -104,7 +95,6 @@ func (f *Filter) Check(d []byte) bool {
 	return result
 }
 
-// Turns the bloom-filter into bytes
 func (f *Filter) Bytes() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.Grow(int(1 + f.bitmap.writeSize()))
@@ -119,7 +109,6 @@ func (f *Filter) Bytes() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// Returns the current False Positive Rate of the bloom-filter
 func (f *Filter) FalsePositiveRate(n uint) float64 {
 	return math.Pow((1 - math.Exp(-float64(f.k*n)/
 		float64(f.m))), float64(f.k))

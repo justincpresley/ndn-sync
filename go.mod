@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/apex/log v1.9.0
-	github.com/bahlo/generic-list-go v0.2.0
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203
 	github.com/stretchr/testify v1.8.1
 	github.com/zeebo/xxh3 v1.0.2

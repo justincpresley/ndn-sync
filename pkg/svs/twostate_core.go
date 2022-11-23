@@ -117,8 +117,8 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 		c.logger.Warn("The Core was updated with a lower seqno.")
 		return
 	}
-	c.vectorMutex.Lock()
 	c.sourceSeq = seqno
+	c.vectorMutex.Lock()
 	c.vector.Set(c.sourceStr, seqno, false)
 	c.vectorMutex.Unlock()
 	c.scheduler.Skip()
@@ -200,7 +200,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 		isNewer bool
 	)
 	c.vectorMutex.Lock()
-	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {
+	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
 		temp = c.vector.Get(pair.Key)
 		if temp < pair.Value {
 			missing = append(missing, NewMissingData(pair.Key, temp+1, pair.Value))
@@ -225,7 +225,7 @@ func (c *twoStateCore) recordStateVector(incomingVector StateVector) bool {
 	}
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
-	for pair := incomingVector.Entries().Last(); pair != nil; pair = pair.Prev() {
+	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
 		if c.record.Get(pair.Key) < pair.Value {
 			c.record.Set(pair.Key, pair.Value, false)
 		}

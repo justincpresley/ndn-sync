@@ -49,7 +49,7 @@ func TestStateVectorLoop(t *testing.T) {
 	sv.Set("/node1", 2, false)
 	sv.Set("/node2", 8, false)
 	sv.Set("/node3", 1, false)
-	for pair := sv.Entries().First(); pair != nil; pair = pair.Next() {
+	for pair := sv.Entries().Front(); pair != nil; pair = pair.Next() {
 		nsv.Set(pair.Key, pair.Value, true)
 	}
 	assert.Equal(t, sv, nsv)
@@ -84,7 +84,7 @@ func TestStateVectorOrdering(t *testing.T) {
 	sv2 := svs.NewStateVector()
 	sv2.Set("/two", 2, true)
 	sv2.Set("/one", 1, true)
-	for p1, p2 := sv1.Entries().First(), sv2.Entries().First(); p1 != nil; p1, p2 = p1.Next(), p2.Next() {
+	for p1, p2 := sv1.Entries().Front(), sv2.Entries().Front(); p1 != nil; p1, p2 = p1.Next(), p2.Next() {
 		assert.Equal(t, p1.Key, p2.Key)
 		assert.Equal(t, p1.Value, p2.Value)
 	}

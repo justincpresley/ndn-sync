@@ -118,7 +118,7 @@ func (sv stateVector) Get(source string) uint64 {
 
 func (sv stateVector) String() string {
 	str := ""
-	for p := sv.entries.First(); p != nil; p = p.Next() {
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		str += p.Key + ":" + strconv.FormatUint(p.Value, 10) + " "
 	}
 	if str != "" {
@@ -133,7 +133,7 @@ func (sv stateVector) Len() int {
 
 func (sv stateVector) Total() uint64 {
 	total := uint64(0)
-	for p := sv.entries.First(); p != nil; p = p.Next() {
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		total += p.Value
 	}
 	return total
@@ -159,7 +159,7 @@ func (sv stateVector) EncodingLengths() (int, []int) {
 		ls           []int = make([]int, sv.entries.Len())
 		n            enc.Name
 	)
-	for p := sv.entries.First(); p != nil; p = p.Next() {
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		n, _ = enc.NameFromStr(p.Key)
 		nl = n.EncodingLength()
 		// source
@@ -185,7 +185,7 @@ func (sv stateVector) EncodeInto(buf []byte, ls []int) int {
 		el, off, pos, i int
 		n               enc.Name
 	)
-	for p := sv.entries.First(); p != nil; p = p.Next() {
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		n, _ = enc.NameFromStr(p.Key)
 		el = ls[i]
 		off = TypeEntry.EncodingLength() + enc.TLNum(el).EncodingLength()

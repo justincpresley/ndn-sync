@@ -1,12 +1,15 @@
 # Changes Made
 
-All substantial changes/modifications/additions away from [the original repository](https://github.com/wk8/go-ordered-map) are documented in this file.
-These changes were performed on the original repository at the commit `ab40b2b9a64414289e84274611d1fee69e52ff55`.
+All substantial changes/modifications/additions away from [the original repository](https://github.com/elliotchance/orderedmap) are documented in this file.
+These changes were performed on `v2` of the original repository at the commit `1e43e194ff533a346bab5f9b66b738256f199c8a`.
 
 ## Added
-- New External API Functions: Clone() / Copy(), Reverse(), Size(), First() / Front(), Last() / Back() which are self-described.
-- New Internal Function setNewPair() to prevent code copying.
+- list has the functions MoveToBack() and MoveToFront() to move Elements.
 
 ## Changed
-- Set() / Load() now take in whether the value is old or new. This ideally keeps an order of newness. If the value is new, add or change AND push to front. If the value is old, simply add to back OR just change.
-- Testing now covers the new functions that were added.
+- list now uses a head and tail pointer rather than a root node.
+- OrderedMap's Set() now take in whether the value is old or new. This ideally keeps an order of newness. If the value is new, add or change AND push to front. If the value is old, simply add to back OR just change.
+- Various other small changes.
+
+## Removed
+- OrderedMap's Keys() and GetOrDefault() functions.
