@@ -162,7 +162,7 @@ func (c *twoStateCore) target() {
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()
 	localNewer := c.mergeStateVector(c.record)
-	if atomic.LoadInt32((*int32)(c.state)) == int32(SteadyState) || localNewer {
+	if CoreState(atomic.LoadInt32((*int32)(c.state))) == SteadyState || localNewer {
 		c.sendInterest()
 	}
 	atomic.StoreInt32((*int32)(c.state), int32(SteadyState))
@@ -220,7 +220,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 }
 
 func (c *twoStateCore) recordStateVector(incomingVector StateVector) bool {
-	if atomic.LoadInt32((*int32)(c.state)) != int32(SuppressionState) {
+	if CoreState(atomic.LoadInt32((*int32)(c.state))) != SuppressionState {
 		return false
 	}
 	c.recordMutex.Lock()

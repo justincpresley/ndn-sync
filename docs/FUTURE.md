@@ -4,9 +4,8 @@
 
 As a developer, I am focusing my efforts on the pressing next-step updates.
 
-- **Revisit Ordered Maps**: The implementation I used was not very considerate when to reuse / performance.
-- **Utilize High-level Schema API**: The go-ndn library recently developed a high-level way to incorporate security. This should be used for SVS instead of low-level in order to prepare for the ability to define a thorough security model for SVS.
-- **SVS HealthSync**: An ephemeral sync to help ensure everyone is healthy!
+- **svs~Utilize Schema API**: The go-ndn library recently developed a high-level api that incorporates security. This should be used for SVS to support the ability to define a trust schema (security within SVS).
+- **svs~HealthSync**: An ephemeral sync to help ensure everyone is healthy!
 
 ## Areas to Support as a Contributor
 

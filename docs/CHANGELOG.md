@@ -7,6 +7,17 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 
 ## [Unreleased]
 
+## [v0.0.0-alpha.6] - 2022-11-24
+### Changed
+- `sync/atomic` is a thing and its more performant. Utilize it for `CoreState` within the SVS Core and each SVS Sync's `numFetches`.
+- Utilize and build off of a different implementation for `orderedmap`s. Reduces `StateVector` memory usage by half and improves performance for most operations including parsing.
+
+### Added
+- `orderedmap`s own implemenation of a list (not available from a API standpoint).
+
+### Removed
+- The generic list dependency due to its non-use.
+
 ## [v0.0.0-alpha.5] - 2022-11-19
 ### Changed
 - StateVector encoding optimization, entry lengths are reused.
@@ -53,7 +64,8 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.5...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.6...HEAD
+[v0.0.0-alpha.6]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.5...v0.0.0-alpha.6
 [v0.0.0-alpha.5]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.4...v0.0.0-alpha.5
 [v0.0.0-alpha.4]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.3...v0.0.0-alpha.4
 [v0.0.0-alpha.3]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.2...v0.0.0-alpha.3
