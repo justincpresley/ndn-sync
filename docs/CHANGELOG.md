@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+## Changed
+- Updated all dependencies.
+
+## Removed
+- Dependencies and Code not related to the first sync, SVS.
+
 
 ## [v0.0.0-alpha.6] - 2022-11-24
 ### Changed
