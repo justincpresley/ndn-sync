@@ -28,6 +28,14 @@ about newly published data, effectively synchronizing data in a group.
 * [**specification**](https://github.com/justincpresley/ndn-sync/tree/specification): The side branch which holds Syncs in their original form according to their technical specification.
 
 
+## Usage
+
+Before you utilize the library or try any examples, please ensure that you have the necessary [prerequisites](/docs/INSTALL.md). It will take but a few minutes!
+
+***ndn-sync*** is a library containing multiple modules (different Syncs), each with individual functionality and use.
+
+It is highly recommended that you check out the examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
+
 ## Syncs
 
 There are many Syncs!
@@ -42,9 +50,6 @@ describes many of the Syncs that are currently known and their unique difference
 ***ndn-sync*** has the following Syncs implemented:
 
 * `svs` - **StateVectorSync**: [Details](/docs/syncs/SVS.md) | [API Documentation](https://pkg.go.dev/github.com/justincpresley/ndn-sync/pkg/svs) | [Examples](/examples/svs/README.md)
-
-It is highly recommended that you check out the examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
-
 
 ## License
 

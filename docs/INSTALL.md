@@ -24,9 +24,6 @@ You can test that **NFD** is properly installed by running `nfd-start` and than 
 
 ## Using this Library
 
-After both prerequisites are installed, you can import Syncs and use them in your applications! Of course, Go will complain if you do not fetch the library via `go get`.
+After both prerequisites are installed, you can import Syncs and use them in your applications! Of course, Go might complain if you do not retrieve the library via `go get`.
 
-If you `git clone` ***ndn-sync***, you can run the following instead and run the examples with the source that you have.
-```
-go get -u -v -f all
-```
+If you `git clone` ***ndn-sync***, you can simply run the examples out of the box and Go will automatically retrieve the needed dependencies.
