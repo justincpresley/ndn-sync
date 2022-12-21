@@ -2,8 +2,8 @@
 
 ![Visual](/docs/README_VISUAL.png)
 
-![Test](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/test.yaml?branch=production)
-![CodeQL](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/codeql.yml?branch=production)
+![Test](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/test.yaml?branch=production&label=Test)
+![CodeQL](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/codeql.yml?branch=production&label=CodeQL)
 ![CodeFactor](https://img.shields.io/codefactor/grade/github/justincpresley/ndn-sync?label=CodeFactor)
 ![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync)
 ![Version](https://img.shields.io/github/v/tag/justincpresley/ndn-sync?label=Latest%20version)
@@ -30,7 +30,7 @@ about newly published data, effectively synchronizing data in a group.
 
 ## Usage
 
-Before you utilize the library or try any examples, please ensure that you have the necessary [prerequisites](/docs/INSTALL.md). It will take but a few minutes!
+Before you utilize ***ndn-sync*** or try any of it's examples, please ensure that you have the necessary [prerequisites](/docs/INSTALL.md). It will take but a few minutes!
 
 ***ndn-sync*** is a library containing multiple modules (different Syncs), each with individual functionality and use.
 
