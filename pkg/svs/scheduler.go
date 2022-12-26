@@ -23,8 +23,21 @@ package svs
 
 import (
 	"math/rand"
-	"sync"
+	"sync/atomic"
 	"time"
+)
+
+type action struct {
+	typ int
+	val uint64
+}
+
+const (
+	actionStop  int = 0
+	actionSkip  int = 1
+	actionReset int = 2
+	actionSet   int = 3
+	actionAdd   int = 4
 )
 
 type Scheduler interface {
@@ -41,12 +54,11 @@ type scheduler struct {
 	function   func()
 	interval   uint
 	randomness float32
-	quit       chan struct{}
-	cycle      chan time.Duration
-	startTime  time.Time
-	cycleTime  time.Duration
-	cycleMutex sync.RWMutex
+	actions    chan action
 	timer      *time.Timer
+	cycleTime  *uint64
+	startTime  *int64
+	done       chan struct{}
 }
 
 func NewScheduler(function func(), interval uint, randomness float32) Scheduler {
@@ -54,89 +66,102 @@ func NewScheduler(function func(), interval uint, randomness float32) Scheduler 
 		function:   function,
 		interval:   interval,
 		randomness: randomness,
-		quit:       make(chan struct{}),
-		cycle:      make(chan time.Duration),
+		actions:    make(chan action, 3),
+		cycleTime:  new(uint64),
+		startTime:  new(int64),
 	}
 }
 
-func (s *scheduler) Start(executeNow bool) {
-	go s.target(executeNow)
-}
-
-func (s *scheduler) target(executeNow bool) {
-	var temp time.Duration
-	if executeNow {
+func (s *scheduler) target(execute bool) {
+	defer close(s.done)
+	if execute {
 		s.function()
 	}
-	s.cycleMutex.Lock()
-	s.cycleTime = time.Duration(AddRandomness(s.interval, s.randomness)) * time.Millisecond
-	s.startTime = time.Now()
-	s.timer = time.NewTimer(s.cycleTime)
-	s.cycleMutex.Unlock()
+	temp := AddRandomness(s.interval, s.randomness)
+	atomic.StoreUint64(s.cycleTime, uint64(temp))
+	atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+	s.timer = time.NewTimer(time.Duration(temp) * time.Millisecond)
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
-			s.cycleMutex.Lock()
-			s.cycleTime = time.Duration(AddRandomness(s.interval, s.randomness)) * time.Millisecond
-			s.startTime = time.Now()
-			s.timer.Reset(s.cycleTime)
-			s.cycleMutex.Unlock()
-		case temp = <-s.cycle:
-			s.cycleMutex.Lock()
-			s.cycleTime = temp
-			s.startTime = time.Now()
-			s.cycleMutex.Unlock()
+			temp = AddRandomness(s.interval, s.randomness)
+			atomic.StoreUint64(s.cycleTime, uint64(temp))
+			atomic.StoreInt64(s.startTime, time.Now().UnixNano())
 			if !s.timer.Stop() {
 				select {
 				case <-s.timer.C:
 				default:
 				}
 			}
-			s.timer.Reset(temp)
-		case <-s.quit:
-			if !s.timer.Stop() {
-				select {
-				case <-s.timer.C:
-				default:
+			s.timer.Reset(time.Duration(temp) * time.Millisecond)
+		case a := <-s.actions:
+			switch a.typ {
+			case actionStop:
+				if !s.timer.Stop() {
+					select {
+					case <-s.timer.C:
+					default:
+					}
 				}
+
+				return
+			case actionSkip:
+				s.function()
+				fallthrough
+			case actionReset:
+				temp = AddRandomness(s.interval, s.randomness)
+				atomic.StoreUint64(s.cycleTime, uint64(temp))
+				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+				if !s.timer.Stop() {
+					select {
+					case <-s.timer.C:
+					default:
+					}
+				}
+				s.timer.Reset(time.Duration(temp) * time.Millisecond)
+			case actionAdd:
+				a.val += atomic.LoadUint64(s.cycleTime)
+				fallthrough
+			case actionSet:
+				atomic.StoreUint64(s.cycleTime, a.val)
+				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+				if !s.timer.Stop() {
+					select {
+					case <-s.timer.C:
+					default:
+					}
+				}
+				s.timer.Reset(time.Duration(a.val) * time.Millisecond)
 			}
-			return
+		default:
 		}
 	}
 }
 
+func (s *scheduler) Start(execute bool) {
+	s.done = make(chan struct{})
+	go s.target(execute)
+}
+
 func (s *scheduler) Stop() {
-	s.quit <- struct{}{}
+	s.actions <- action{typ: actionStop}
+	<-s.done
 }
 
-func (s *scheduler) Skip() {
-	s.cycle <- time.Duration(0)
-}
-
-func (s *scheduler) Reset() {
-	s.cycle <- time.Duration(AddRandomness(s.interval, s.randomness)) * time.Millisecond
-}
-
-func (s *scheduler) Set(value uint) {
-	s.cycle <- time.Duration(value) * time.Millisecond
-}
-
-func (s *scheduler) Add(value uint) {
-	s.cycleMutex.RLock()
-	defer s.cycleMutex.RUnlock()
-	s.cycle <- (time.Duration(value) * time.Millisecond) + s.cycleTime
-}
+func (s *scheduler) Skip()              { s.actions <- action{typ: actionSkip} }
+func (s *scheduler) Reset()             { s.actions <- action{typ: actionReset} }
+func (s *scheduler) Set(v uint)         { s.actions <- action{typ: actionSet, val: uint64(v)} }
+func (s *scheduler) Add(v uint)         { s.actions <- action{typ: actionAdd, val: uint64(v)} }
 
 func (s *scheduler) TimeLeft() time.Duration {
-	s.cycleMutex.RLock()
-	defer s.cycleMutex.RUnlock()
-	return time.Until(s.startTime.Add(s.cycleTime))
+	now := atomic.LoadInt64(s.startTime)
+	start := time.Unix(int64(now/1e9), int64(now%1e9))
+	cycle := time.Duration(atomic.LoadUint64(s.cycleTime)) * time.Millisecond
+	return time.Until(start.Add(cycle))
 }
 
 func AddRandomness(value uint, randomness float32) uint {
-	i := uint(float32(value) * randomness)
-	min := int(value - i)
-	max := int(value + i)
-	return uint(rand.Intn(max-min) + min)
+	r := rand.Intn(int(float32(value) * randomness))
+	return value + uint(r)
 }
