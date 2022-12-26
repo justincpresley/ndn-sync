@@ -134,7 +134,6 @@ func (s *scheduler) target(execute bool) {
 				}
 				s.timer.Reset(time.Duration(a.val) * time.Millisecond)
 			}
-		default:
 		}
 	}
 }
