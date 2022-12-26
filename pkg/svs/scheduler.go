@@ -155,7 +155,7 @@ func (s *scheduler) Add(v uint)         { s.actions <- action{typ: actionAdd, va
 
 func (s *scheduler) TimeLeft() time.Duration {
 	now := atomic.LoadInt64(s.startTime)
-	start := time.Unix(int64(now/1e9), int64(now%1e9))
+	start := time.Unix(now/1e9, now%1e9)
 	cycle := time.Duration(atomic.LoadUint64(s.cycleTime)) * time.Millisecond
 	return time.Until(start.Add(cycle))
 }
