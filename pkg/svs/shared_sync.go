@@ -33,6 +33,13 @@ import (
 	utl "github.com/zjkmxy/go-ndn/pkg/utils"
 )
 
+type sharedFetchItem struct {
+	source  string
+	seqno   uint64
+	retries uint
+	cache   bool
+}
+
 type sharedSync struct {
 	app         *eng.Engine
 	core        Core
@@ -47,7 +54,7 @@ type sharedSync struct {
 	logger      *log.Entry
 	dataCall    func(source string, seqno uint64, data ndn.Data)
 	updateCall  func(sync SharedSync, missing []MissingData)
-	fetchQueue  chan func() (string, uint64, bool, uint)
+	fetchQueue  chan *sharedFetchItem
 	numFetches  *int32
 	isListening bool
 }
@@ -112,7 +119,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
-		fetchQueue: make(chan func() (string, uint64, bool, uint), constants.InitialFetchQueueLength),
+		fetchQueue: make(chan *sharedFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
 	return s
@@ -157,12 +164,18 @@ func (s *sharedSync) Shutdown() {
 }
 
 func (s *sharedSync) FetchData(source string, seqno uint64, cache bool) {
+	i := &sharedFetchItem{
+		source:  source,
+		seqno:   seqno,
+		retries: s.constants.DataInterestRetries,
+		cache:   cache,
+	}
 	if s.constants.MaxConcurrentDataInterests == 0 || atomic.LoadInt32(s.numFetches) < s.constants.MaxConcurrentDataInterests {
 		atomic.AddInt32(s.numFetches, 1)
-		s.sendInterest(source, seqno, cache, s.constants.DataInterestRetries)
+		s.sendInterest(i)
 		return
 	}
-	s.fetchQueue <- func() (string, uint64, bool, uint) { return source, seqno, cache, s.constants.DataInterestRetries }
+	s.fetchQueue <- i
 }
 
 func (s *sharedSync) PublishData(content []byte) {
@@ -195,24 +208,24 @@ func (s *sharedSync) GetCore() Core {
 	return s.core
 }
 
-func (s *sharedSync) sendInterest(source string, seqno uint64, cache bool, retries uint) {
-	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
+func (s *sharedSync) sendInterest(item *sharedFetchItem) {
+	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(item.source, item.seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
 		return
 	}
 	err = s.app.Express(finalName, s.intCfg, wire,
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
-			if result == ndn.InterestResultData || result == ndn.InterestResultNack || retries == 0 {
-				if cache && result == ndn.InterestResultData {
+			if result == ndn.InterestResultData || result == ndn.InterestResultNack || item.retries == 0 {
+				if item.cache && result == ndn.InterestResultData {
 					s.storage.Set(finalName.Bytes(), rawData.Join())
 				}
-				s.dataCall(source, seqno, data)
+				s.dataCall(item.source, item.seqno, data)
 				atomic.AddInt32(s.numFetches, -1)
 				s.processQueue()
 			} else {
-				retries--
-				s.sendInterest(source, seqno, cache, retries)
+				item.retries--
+				s.sendInterest(item)
 			}
 		})
 	if err != nil {
@@ -226,7 +239,7 @@ func (s *sharedSync) processQueue() {
 		select {
 		case f := <-s.fetchQueue:
 			atomic.AddInt32(s.numFetches, 1)
-			s.sendInterest(f())
+			s.sendInterest(f)
 			return
 		default:
 		}

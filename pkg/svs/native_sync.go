@@ -33,6 +33,12 @@ import (
 	utl "github.com/zjkmxy/go-ndn/pkg/utils"
 )
 
+type nativeFetchItem struct {
+	source  string
+	seqno   uint64
+	retries uint
+}
+
 type nativeSync struct {
 	app          *eng.Engine
 	core         Core
@@ -48,7 +54,7 @@ type nativeSync struct {
 	logger       *log.Entry
 	dataCall     func(source string, seqno uint64, data ndn.Data)
 	updateCall   func(sync NativeSync, missing []MissingData)
-	fetchQueue   chan func() (string, uint64, uint)
+	fetchQueue   chan *nativeFetchItem
 	numFetches   *int32
 	isListening  bool
 }
@@ -114,7 +120,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		updateCall: config.UpdateCallback,
-		fetchQueue: make(chan func() (string, uint64, uint), constants.InitialFetchQueueLength),
+		fetchQueue: make(chan *nativeFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
 	return s
@@ -169,12 +175,17 @@ func (s *nativeSync) Shutdown() {
 }
 
 func (s *nativeSync) FetchData(source string, seqno uint64) {
+	i := &nativeFetchItem{
+		source:  source,
+		seqno:   seqno,
+		retries: s.constants.DataInterestRetries,
+	}
 	if s.constants.MaxConcurrentDataInterests == 0 || atomic.LoadInt32(s.numFetches) < s.constants.MaxConcurrentDataInterests {
 		atomic.AddInt32(s.numFetches, 1)
-		s.sendInterest(source, seqno, s.constants.DataInterestRetries)
+		s.sendInterest(i)
 		return
 	}
-	s.fetchQueue <- func() (string, uint64, uint) { return source, seqno, s.constants.DataInterestRetries }
+	s.fetchQueue <- i
 }
 
 func (s *nativeSync) PublishData(content []byte) {
@@ -207,21 +218,21 @@ func (s *nativeSync) GetCore() Core {
 	return s.core
 }
 
-func (s *nativeSync) sendInterest(source string, seqno uint64, retries uint) {
-	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(source, seqno), s.intCfg, nil, nil)
+func (s *nativeSync) sendInterest(item *nativeFetchItem) {
+	wire, _, finalName, err := s.app.Spec().MakeInterest(s.getDataName(item.source, item.seqno), s.intCfg, nil, nil)
 	if err != nil {
 		s.logger.Errorf("Unable to make Interest: %+v", err)
 		return
 	}
 	err = s.app.Express(finalName, s.intCfg, wire,
 		func(result ndn.InterestResult, data ndn.Data, rawData, sigCovered enc.Wire, nackReason uint64) {
-			if result == ndn.InterestResultData || result == ndn.InterestResultNack || retries == 0 {
-				s.dataCall(source, seqno, data)
+			if result == ndn.InterestResultData || result == ndn.InterestResultNack || item.retries == 0 {
+				s.dataCall(item.source, item.seqno, data)
 				atomic.AddInt32(s.numFetches, -1)
 				s.processQueue()
 			} else {
-				retries--
-				s.sendInterest(source, seqno, retries)
+				item.retries--
+				s.sendInterest(item)
 			}
 		})
 	if err != nil {
@@ -235,7 +246,7 @@ func (s *nativeSync) processQueue() {
 		select {
 		case f := <-s.fetchQueue:
 			atomic.AddInt32(s.numFetches, 1)
-			s.sendInterest(f())
+			s.sendInterest(f)
 			return
 		default:
 		}
