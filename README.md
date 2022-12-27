@@ -4,9 +4,10 @@
 
 ![Test](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/test.yaml?branch=production&label=Test)
 ![CodeQL](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/codeql.yml?branch=production&label=CodeQL)
-![CodeFactor](https://img.shields.io/codefactor/grade/github/justincpresley/ndn-sync?label=CodeFactor)
-![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync)
+![CodeFactor](https://img.shields.io/codefactor/grade/github/justincpresley/ndn-sync/production?label=CodeFactor)
+![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync/production?label=Go)
 ![Version](https://img.shields.io/github/v/tag/justincpresley/ndn-sync?label=Latest%20version)
+![Commits](https://img.shields.io/github/commits-since/justincpresley/ndn-sync/latest/production?label=Unreleased%20commits)
 ![License](https://img.shields.io/github/license/justincpresley/ndn-sync?label=License)
 
 </div>
