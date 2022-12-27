@@ -148,10 +148,10 @@ func (s *scheduler) Stop() {
 	<-s.done
 }
 
-func (s *scheduler) Skip()              { s.actions <- action{typ: actionSkip} }
-func (s *scheduler) Reset()             { s.actions <- action{typ: actionReset} }
-func (s *scheduler) Set(v uint)         { s.actions <- action{typ: actionSet, val: uint64(v)} }
-func (s *scheduler) Add(v uint)         { s.actions <- action{typ: actionAdd, val: uint64(v)} }
+func (s *scheduler) Skip()      { s.actions <- action{typ: actionSkip} }
+func (s *scheduler) Reset()     { s.actions <- action{typ: actionReset} }
+func (s *scheduler) Set(v uint) { s.actions <- action{typ: actionSet, val: uint64(v)} }
+func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint64(v)} }
 
 func (s *scheduler) TimeLeft() time.Duration {
 	now := atomic.LoadInt64(s.startTime)

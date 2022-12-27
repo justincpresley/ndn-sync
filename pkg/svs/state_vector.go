@@ -24,6 +24,7 @@ package svs
 import (
 	"errors"
 	"strconv"
+	"strings"
 
 	om "github.com/justincpresley/ndn-sync/util/orderedmap"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
@@ -117,14 +118,17 @@ func (sv stateVector) Get(source string) uint64 {
 }
 
 func (sv stateVector) String() string {
-	str := ""
+	var b strings.Builder
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		str += p.Key + ":" + strconv.FormatUint(p.Value, 10) + " "
+		b.WriteString(p.Key)
+		b.WriteString(":")
+		b.WriteString(strconv.FormatUint(p.Value, 10))
+		b.WriteString(" ")
 	}
-	if str != "" {
-		return str[:len(str)-1]
+	if b.Len() <= 0 {
+		return ""
 	}
-	return str
+	return b.String()[:b.Len()-1]
 }
 
 func (sv stateVector) Len() int {
