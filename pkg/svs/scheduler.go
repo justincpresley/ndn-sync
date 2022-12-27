@@ -78,16 +78,16 @@ func (s *scheduler) target(execute bool) {
 		s.function()
 	}
 	temp := AddRandomness(s.interval, s.randomness)
-	atomic.StoreUint64(s.cycleTime, uint64(temp))
 	atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+	atomic.StoreUint64(s.cycleTime, uint64(temp))
 	s.timer = time.NewTimer(time.Duration(temp) * time.Millisecond)
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
 			temp = AddRandomness(s.interval, s.randomness)
-			atomic.StoreUint64(s.cycleTime, uint64(temp))
 			atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+			atomic.StoreUint64(s.cycleTime, uint64(temp))
 			if !s.timer.Stop() {
 				select {
 				case <-s.timer.C:
@@ -110,8 +110,8 @@ func (s *scheduler) target(execute bool) {
 				fallthrough
 			case actionReset:
 				temp = AddRandomness(s.interval, s.randomness)
-				atomic.StoreUint64(s.cycleTime, uint64(temp))
 				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+				atomic.StoreUint64(s.cycleTime, uint64(temp))
 				if !s.timer.Stop() {
 					select {
 					case <-s.timer.C:
@@ -123,8 +123,8 @@ func (s *scheduler) target(execute bool) {
 				a.val += atomic.LoadUint64(s.cycleTime)
 				fallthrough
 			case actionSet:
-				atomic.StoreUint64(s.cycleTime, a.val)
 				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
+				atomic.StoreUint64(s.cycleTime, a.val)
 				if !s.timer.Stop() {
 					select {
 					case <-s.timer.C:

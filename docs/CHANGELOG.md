@@ -6,12 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.7] - 2022-12-27
 ## Changed
+- Completely refactored SVS `Scheduler`.
+- SVS's built-in fetchers for both `NativeSync` + `SharedSync` now use a channel of structs rather than a channel of funcs for readability and possible performance.
+- Utilize `strings.Builder` for the `(stateVector).String()` method.
 - Updated all dependencies.
+- Other small changes.
 
 ## Removed
-- Dependencies and Code not related to the first sync, SVS.
-
+- Dependencies and code not related to the first sync, SVS.
 
 ## [v0.0.0-alpha.6] - 2022-11-24
 ### Changed
@@ -70,7 +75,8 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.6...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.7...HEAD
+[v0.0.0-alpha.7]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.6...v0.0.0-alpha.7
 [v0.0.0-alpha.6]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.5...v0.0.0-alpha.6
 [v0.0.0-alpha.5]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.4...v0.0.0-alpha.5
 [v0.0.0-alpha.4]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.3...v0.0.0-alpha.4
