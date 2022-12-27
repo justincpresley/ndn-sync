@@ -95,10 +95,7 @@ func (fs BoltDB) Close() {
 
 func ensureDirectory(path string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return err
-	}
-	return nil
+	return os.MkdirAll(dir, os.ModePerm)
 }
 
 func resolvePath(path string) string {
