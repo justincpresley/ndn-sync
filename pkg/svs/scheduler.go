@@ -33,11 +33,11 @@ type action struct {
 }
 
 const (
-	actionStop  int = 0
-	actionSkip  int = 1
-	actionReset int = 2
-	actionSet   int = 3
-	actionAdd   int = 4
+	actionStop int = iota
+	actionSkip
+	actionReset
+	actionSet
+	actionAdd
 )
 
 type Scheduler interface {
@@ -104,7 +104,6 @@ func (s *scheduler) target(execute bool) {
 					default:
 					}
 				}
-
 				return
 			case actionSkip:
 				s.function()
@@ -133,6 +132,7 @@ func (s *scheduler) target(execute bool) {
 					}
 				}
 				s.timer.Reset(time.Duration(a.val) * time.Millisecond)
+			default:
 			}
 		}
 	}
@@ -154,10 +154,8 @@ func (s *scheduler) Set(v uint) { s.actions <- action{typ: actionSet, val: uint6
 func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint64(v)} }
 
 func (s *scheduler) TimeLeft() time.Duration {
-	now := atomic.LoadInt64(s.startTime)
-	start := time.Unix(now/1e9, now%1e9)
-	cycle := time.Duration(atomic.LoadUint64(s.cycleTime)) * time.Millisecond
-	return time.Until(start.Add(cycle))
+	elapsed := time.Now().UnixNano() - atomic.LoadInt64(s.startTime)
+	return time.Duration((atomic.LoadUint64(s.cycleTime) * time.Millisecond) - elapsed)
 }
 
 func AddRandomness(value uint, randomness float32) uint {
