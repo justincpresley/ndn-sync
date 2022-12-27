@@ -155,7 +155,7 @@ func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint6
 
 func (s *scheduler) TimeLeft() time.Duration {
 	elapsed := time.Now().UnixNano() - atomic.LoadInt64(s.startTime)
-	return time.Duration(int64(atomic.LoadUint64(s.cycleTime)*1000) - elapsed)
+	return time.Duration(atomic.LoadUint64(s.cycleTime))*time.Millisecond - time.Duration(elapsed)
 }
 
 func AddRandomness(value uint, randomness float32) uint {
