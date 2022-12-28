@@ -34,6 +34,13 @@ const (
 type NamingScheme int
 
 const (
-	HostOrientedNaming  NamingScheme = 0
-	GroupOrientedNaming NamingScheme = 1
+	SourceOrientedNaming NamingScheme = 0
+	GroupOrientedNaming  NamingScheme = 1
+)
+
+type HandlingOption int
+
+const (
+	NoHandling            HandlingOption = 0
+	SourceCentricHandling HandlingOption = 1
 )

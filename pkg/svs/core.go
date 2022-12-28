@@ -32,14 +32,13 @@ import (
 type CoreState int32
 
 const (
-	SteadyState      CoreState = 0
-	SuppressionState CoreState = 1
+	Steady      CoreState = 0
+	Suppression CoreState = 1
 )
 
 type CoreConfig struct {
-	Source         enc.Name
-	SyncPrefix     enc.Name
-	UpdateCallback func([]MissingData)
+	Source     enc.Name
+	SyncPrefix enc.Name
 }
 
 type Core interface {
@@ -50,6 +49,7 @@ type Core interface {
 	GetSeqno() uint64
 	GetStateVector() StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
+	MissingChan() chan *[]MissingData
 }
 
 func NewCore(app *eng.Engine, config *CoreConfig, constants *Constants) Core {

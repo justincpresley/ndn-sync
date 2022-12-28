@@ -32,6 +32,7 @@ type Constants struct {
 	SyncInterestLifeTime       uint    // (ms) milliseconds
 	MaxConcurrentDataInterests int32   // 0 = inf
 	InitialFetchQueueLength    uint    // only helps to mitigate allocation resizing
+	InitialMissingChannelSize  uint    // only helps to mitigate allocation resizing
 }
 
 func GetDefaultConstants() *Constants {
@@ -46,5 +47,6 @@ func GetDefaultConstants() *Constants {
 		SyncInterestLifeTime:       1000,
 		MaxConcurrentDataInterests: 10,
 		InitialFetchQueueLength:    50,
+		InitialMissingChannelSize:  5,
 	}
 }

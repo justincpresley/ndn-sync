@@ -33,20 +33,19 @@ type NativeSync interface {
 	Listen()
 	Activate(bool)
 	Shutdown()
-	FetchData(string, uint64)
+	NeedData(string, uint64)
 	PublishData([]byte)
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
 	GetCore() Core
 }
 
 type NativeConfig struct {
-	Source       enc.Name
-	GroupPrefix  enc.Name
-	NamingScheme NamingScheme
-	StoragePath  string
-	DataCallback func(source string, seqno uint64, data ndn.Data)
-	// low-level only
-	UpdateCallback func(sync NativeSync, missing []MissingData)
+	Source         enc.Name
+	GroupPrefix    enc.Name
+	NamingScheme   NamingScheme
+	HandlingOption HandlingOption
+	StoragePath    string
+	DataCallback   func(source string, seqno uint64, data ndn.Data)
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) NativeSync {
@@ -55,10 +54,11 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 
 func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *NativeConfig {
 	return &NativeConfig{
-		Source:       source,
-		GroupPrefix:  group,
-		NamingScheme: HostOrientedNaming,
-		StoragePath:  "./" + source.String() + "_bolt.db",
-		DataCallback: callback,
+		Source:         source,
+		GroupPrefix:    group,
+		NamingScheme:   SourceOrientedNaming,
+		HandlingOption: SourceCentricHandling,
+		StoragePath:    "./" + source.String() + "_bolt.db",
+		DataCallback:   callback,
 	}
 }

@@ -40,6 +40,11 @@ type sharedFetchItem struct {
 	cache   bool
 }
 
+type sharedHandlerData struct {
+	done  chan struct{}
+	cache bool
+}
+
 type sharedSync struct {
 	app         *eng.Engine
 	core        Core
@@ -53,15 +58,14 @@ type sharedSync struct {
 	dataComp    enc.Component
 	logger      *log.Entry
 	dataCall    func(source string, seqno uint64, data ndn.Data)
-	updateCall  func(sync SharedSync, missing []MissingData)
 	fetchQueue  chan *sharedFetchItem
+	handleData  *sharedHandlerData
 	numFetches  *int32
 	isListening bool
 }
 
 func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) *sharedSync {
 	var s *sharedSync
-	var callback func(missing []MissingData)
 	logger := log.WithField("module", "svs")
 	syncComp, _ := enc.ComponentFromStr("sync")
 	dataComp, _ := enc.ComponentFromStr("data")
@@ -71,27 +75,9 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
 		return nil
 	}
-	if config.UpdateCallback == nil {
-		callback = func(missing []MissingData) {
-			var curr uint64
-			for _, m := range missing {
-				curr = m.LowSeqno()
-				for curr <= m.HighSeqno() {
-					s.FetchData(m.Source(), curr, config.CacheOthers)
-					curr++
-				}
-			}
-		}
-	} else {
-		callback = func(missing []MissingData) {
-			s.updateCall(s, missing)
-		}
-	}
-
 	coreConfig := &CoreConfig{
-		Source:         config.Source,
-		SyncPrefix:     syncPrefix,
-		UpdateCallback: callback,
+		Source:     config.Source,
+		SyncPrefix: syncPrefix,
 	}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {
@@ -118,10 +104,23 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		dataComp:   dataComp,
 		logger:     logger,
 		dataCall:   config.DataCallback,
-		updateCall: config.UpdateCallback,
 		fetchQueue: make(chan *sharedFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
+
+	hData := &sharedHandlerData{
+		done:  make(chan struct{}),
+		cache: config.CacheOthers,
+	}
+	if config.HandlingOption != NoHandling {
+		s.handleData = hData
+	}
+	switch config.HandlingOption {
+	case SourceCentricHandling:
+		s.newSourceCentricHandling(hData)
+	default:
+	}
+
 	return s
 }
 
@@ -160,10 +159,13 @@ func (s *sharedSync) Shutdown() {
 			s.logger.Errorf("Unregister route error: %+v", err)
 		}
 	}
+	if s.handleData != nil {
+		<-s.handleData.done
+	}
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *sharedSync) FetchData(source string, seqno uint64, cache bool) {
+func (s *sharedSync) NeedData(source string, seqno uint64, cache bool) {
 	i := &sharedFetchItem{
 		source:  source,
 		seqno:   seqno,
@@ -264,4 +266,27 @@ func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 	dataName = append(dataName, src...)
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
+}
+
+func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
+	missingChan := s.GetCore().MissingChan()
+	var temp uint64
+	go func() {
+		for {
+			select {
+			case missing, ok := <-missingChan:
+				if !ok {
+					data.done <- struct{}{}
+					return
+				}
+				for _, m := range *missing {
+					temp = m.LowSeqno()
+					for temp <= m.HighSeqno() {
+						s.NeedData(m.Source(), temp, data.cache)
+						temp++
+					}
+				}
+			}
+		}
+	}()
 }

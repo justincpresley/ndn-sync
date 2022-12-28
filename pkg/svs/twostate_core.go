@@ -35,35 +35,35 @@ import (
 )
 
 type twoStateCore struct {
-	state          *CoreState
-	app            *eng.Engine
-	constants      *Constants
-	updateCallback func([]MissingData)
-	syncPrefix     enc.Name
-	sourceStr      string
-	sourceSeq      uint64
-	vector         StateVector
-	record         StateVector
-	scheduler      Scheduler
-	logger         *log.Entry
-	intCfg         *ndn.InterestConfig
-	vectorMutex    sync.Mutex
-	recordMutex    sync.Mutex
-	isListening    bool
-	isActive       bool
+	app         *eng.Engine
+	state       *CoreState
+	constants   *Constants
+	missingChan chan *[]MissingData
+	syncPrefix  enc.Name
+	sourceStr   string
+	sourceSeq   uint64
+	vector      StateVector
+	record      StateVector
+	scheduler   Scheduler
+	logger      *log.Entry
+	intCfg      *ndn.InterestConfig
+	vectorMtx   sync.Mutex
+	recordMtx   sync.Mutex
+	isListening bool
+	isActive    bool
 }
 
 func newTwoStateCore(app *eng.Engine, config *CoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
-		state:          new(CoreState),
-		app:            app,
-		constants:      constants,
-		updateCallback: config.UpdateCallback,
-		syncPrefix:     config.SyncPrefix,
-		sourceStr:      config.Source.String(),
-		vector:         NewStateVector(),
-		record:         NewStateVector(),
-		logger:         log.WithField("module", "svs"),
+		app:         app,
+		state:       new(CoreState),
+		constants:   constants,
+		missingChan: make(chan *[]MissingData, constants.InitialMissingChannelSize),
+		syncPrefix:  config.SyncPrefix,
+		sourceStr:   config.Source.String(),
+		vector:      NewStateVector(),
+		record:      NewStateVector(),
+		logger:      log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -109,6 +109,7 @@ func (c *twoStateCore) Shutdown() {
 			c.logger.Errorf("Unregister route error: %+v", err)
 		}
 	}
+	close(c.missingChan)
 	c.logger.Info("Core Shutdown.")
 }
 
@@ -118,9 +119,9 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 		return
 	}
 	c.sourceSeq = seqno
-	c.vectorMutex.Lock()
+	c.vectorMtx.Lock()
 	c.vector.Set(c.sourceStr, seqno, false)
-	c.vectorMutex.Unlock()
+	c.vectorMtx.Unlock()
 	c.scheduler.Skip()
 }
 
@@ -150,7 +151,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
-		atomic.StoreInt32((*int32)(c.state), int32(SuppressionState))
+		atomic.StoreInt32((*int32)(c.state), int32(Suppression))
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
 		if uint(c.scheduler.TimeLeft().Milliseconds()) > delay {
 			c.scheduler.Set(delay)
@@ -159,13 +160,13 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 }
 
 func (c *twoStateCore) target() {
-	c.recordMutex.Lock()
-	defer c.recordMutex.Unlock()
+	c.recordMtx.Lock()
+	defer c.recordMtx.Unlock()
 	localNewer := c.mergeStateVector(c.record)
-	if CoreState(atomic.LoadInt32((*int32)(c.state))) == SteadyState || localNewer {
+	if CoreState(atomic.LoadInt32((*int32)(c.state))) == Steady || localNewer {
 		c.sendInterest()
 	}
-	atomic.StoreInt32((*int32)(c.state), int32(SteadyState))
+	atomic.StoreInt32((*int32)(c.state), int32(Steady))
 	c.record = NewStateVector()
 }
 
@@ -173,9 +174,9 @@ func (c *twoStateCore) sendInterest() {
 	// make the interest
 	// TODO: SIGN THE INTEREST WITH AUTHENTICATABLE KEY
 	// WARNING: SHA SIGNER PROVIDES NOTHING (signature only includes the appParams) & IS ONLY PLACEHOLDER
-	c.vectorMutex.Lock()
+	c.vectorMtx.Lock()
 	name := append(c.syncPrefix, c.vector.ToComponent())
-	c.vectorMutex.Unlock()
+	c.vectorMtx.Unlock()
 	wire, _, finalName, err := c.app.Spec().MakeInterest(
 		name, c.intCfg, enc.Wire{}, sec.NewSha256IntSigner(c.app.Timer()),
 	)
@@ -199,7 +200,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 		temp    uint64
 		isNewer bool
 	)
-	c.vectorMutex.Lock()
+	c.vectorMtx.Lock()
 	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
 		temp = c.vector.Get(pair.Key)
 		if temp < pair.Value {
@@ -212,23 +213,27 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	if incomingVector.Len() < c.vector.Len() {
 		isNewer = true
 	}
-	c.vectorMutex.Unlock()
+	c.vectorMtx.Unlock()
 	if len(missing) != 0 {
-		c.updateCallback(missing)
+		c.missingChan <- &missing
 	}
 	return isNewer
 }
 
 func (c *twoStateCore) recordStateVector(incomingVector StateVector) bool {
-	if CoreState(atomic.LoadInt32((*int32)(c.state))) != SuppressionState {
+	if CoreState(atomic.LoadInt32((*int32)(c.state))) != Suppression {
 		return false
 	}
-	c.recordMutex.Lock()
-	defer c.recordMutex.Unlock()
+	c.recordMtx.Lock()
+	defer c.recordMtx.Unlock()
 	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
 		if c.record.Get(pair.Key) < pair.Value {
 			c.record.Set(pair.Key, pair.Value, false)
 		}
 	}
 	return true
+}
+
+func (c *twoStateCore) MissingChan() chan *[]MissingData {
+	return c.missingChan
 }

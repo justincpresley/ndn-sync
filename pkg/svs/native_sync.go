@@ -39,6 +39,10 @@ type nativeFetchItem struct {
 	retries uint
 }
 
+type nativeHandlerData struct {
+	done chan struct{}
+}
+
 type nativeSync struct {
 	app          *eng.Engine
 	core         Core
@@ -53,15 +57,14 @@ type nativeSync struct {
 	dataComp     enc.Component
 	logger       *log.Entry
 	dataCall     func(source string, seqno uint64, data ndn.Data)
-	updateCall   func(sync NativeSync, missing []MissingData)
 	fetchQueue   chan *nativeFetchItem
+	handleData   *nativeHandlerData
 	numFetches   *int32
 	isListening  bool
 }
 
 func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *nativeSync {
 	var s *nativeSync
-	var callback func(missing []MissingData)
 	logger := log.WithField("module", "svs")
 	syncComp, _ := enc.ComponentFromStr("sync")
 	dataComp, _ := enc.ComponentFromStr("data")
@@ -71,27 +74,9 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
 		return nil
 	}
-	if config.UpdateCallback == nil {
-		callback = func(missing []MissingData) {
-			var curr uint64
-			for _, m := range missing {
-				curr = m.LowSeqno()
-				for curr <= m.HighSeqno() {
-					s.FetchData(m.Source(), curr)
-					curr++
-				}
-			}
-		}
-	} else {
-		callback = func(missing []MissingData) {
-			s.updateCall(s, missing)
-		}
-	}
-
 	coreConfig := &CoreConfig{
-		Source:         config.Source,
-		SyncPrefix:     syncPrefix,
-		UpdateCallback: callback,
+		Source:     config.Source,
+		SyncPrefix: syncPrefix,
 	}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {
@@ -119,10 +104,22 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		dataComp:   dataComp,
 		logger:     logger,
 		dataCall:   config.DataCallback,
-		updateCall: config.UpdateCallback,
 		fetchQueue: make(chan *nativeFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
+
+	hData := &nativeHandlerData{
+		done: make(chan struct{}),
+	}
+	if config.HandlingOption != NoHandling {
+		s.handleData = hData
+	}
+	switch config.HandlingOption {
+	case SourceCentricHandling:
+		s.newSourceCentricHandling(hData)
+	default:
+	}
+
 	return s
 }
 
@@ -171,10 +168,13 @@ func (s *nativeSync) Shutdown() {
 			s.logger.Errorf("Unregister route error: %+v", err)
 		}
 	}
+	if s.handleData != nil {
+		<-s.handleData.done
+	}
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *nativeSync) FetchData(source string, seqno uint64) {
+func (s *nativeSync) NeedData(source string, seqno uint64) {
 	i := &nativeFetchItem{
 		source:  source,
 		seqno:   seqno,
@@ -275,4 +275,27 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 	}
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
+}
+
+func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
+	missingChan := s.GetCore().MissingChan()
+	var temp uint64
+	go func() {
+		for {
+			select {
+			case missing, ok := <-missingChan:
+				if !ok {
+					data.done <- struct{}{}
+					return
+				}
+				for _, m := range *missing {
+					temp = m.LowSeqno()
+					for temp <= m.HighSeqno() {
+						s.NeedData(m.Source(), temp)
+						temp++
+					}
+				}
+			}
+		}
+	}()
 }

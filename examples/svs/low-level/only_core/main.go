@@ -42,17 +42,6 @@ func passAll(enc.Name, enc.Wire, ndn.Signature) bool {
 	return true
 }
 
-func updateCallback(missing []svs.MissingData) {
-	var temp uint64
-	for _, m := range missing {
-		temp = m.LowSeqno()
-		for temp <= m.HighSeqno() {
-			fmt.Println(m.Source() + ": " + strconv.FormatUint(temp, 10))
-			temp++
-		}
-	}
-}
-
 func main() {
 	log.SetLevel(log.WarnLevel) // Change to "InfoLevel" to Look at Interests
 	logger := log.WithField("module", "main")
@@ -80,9 +69,8 @@ func main() {
 
 	fmt.Println("Activating Core ...")
 	config := &svs.CoreConfig{
-		Source:         nid,
-		SyncPrefix:     syncPrefix,
-		UpdateCallback: updateCallback,
+		Source:     nid,
+		SyncPrefix: syncPrefix,
 	}
 	core := svs.NewCore(app, config, svs.GetDefaultConstants())
 	core.Listen()
@@ -92,18 +80,33 @@ func main() {
 
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
-	clock := time.NewTimer(time.Duration(*interval) * time.Millisecond)
+	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
+	recv := core.MissingChan()
+	var temp uint64
 	fmt.Println("Reporting all updates only while updating Core.")
 
 loopCount:
 	for {
 		select {
-		case <-clock.C:
+		// Send updates peroidically
+		case <-send.C:
 			core.SetSeqno(core.GetSeqno() + 1)
-			clock.Reset(time.Duration(*interval) * time.Millisecond)
+			send.Reset(time.Duration(*interval) * time.Millisecond)
+
+		// Receive code when avaliable
+		case missing := <-recv:
+			for _, m := range *missing {
+				temp = m.LowSeqno()
+				for temp <= m.HighSeqno() {
+					fmt.Println(m.Source() + ": " + strconv.FormatUint(temp, 10))
+					temp++
+				}
+			}
+
+		// Close when Keyboard Interrupt
 		case <-sigChannel:
-			if !clock.Stop() {
-				<-clock.C
+			if !send.Stop() {
+				<-send.C
 			}
 			logger.Infof("Received signal %+v - exiting.", sigChannel)
 			break loopCount

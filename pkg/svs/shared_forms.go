@@ -33,21 +33,20 @@ type SharedSync interface {
 	Listen()
 	Activate(bool)
 	Shutdown()
-	FetchData(string, uint64, bool)
+	NeedData(string, uint64, bool)
 	PublishData([]byte)
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
 	GetCore() Core
 }
 
 type SharedConfig struct {
-	Source       enc.Name
-	GroupPrefix  enc.Name
-	StoragePath  string
-	DataCallback func(source string, seqno uint64, data ndn.Data)
+	Source         enc.Name
+	GroupPrefix    enc.Name
+	HandlingOption HandlingOption
+	StoragePath    string
+	DataCallback   func(source string, seqno uint64, data ndn.Data)
 	// high-level only
 	CacheOthers bool
-	// low-level only
-	UpdateCallback func(sync SharedSync, missing []MissingData)
 }
 
 func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) SharedSync {
@@ -56,10 +55,11 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 
 func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *SharedConfig {
 	return &SharedConfig{
-		Source:       source,
-		GroupPrefix:  group,
-		StoragePath:  "./" + source.String() + "_bolt.db",
-		DataCallback: callback,
-		CacheOthers:  true,
+		Source:         source,
+		GroupPrefix:    group,
+		HandlingOption: SourceCentricHandling,
+		StoragePath:    "./" + source.String() + "_bolt.db",
+		DataCallback:   callback,
+		CacheOthers:    true,
 	}
 }

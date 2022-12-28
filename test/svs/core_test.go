@@ -33,9 +33,8 @@ func TestCoreInitialState(t *testing.T) {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr("/nodename")
 	config := &svs.CoreConfig{
-		Source:         nid,
-		SyncPrefix:     syncPrefix,
-		UpdateCallback: func(missing []svs.MissingData) {},
+		Source:     nid,
+		SyncPrefix: syncPrefix,
 	}
 	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
 	assert.Equal(t, uint64(0), core.GetSeqno())
