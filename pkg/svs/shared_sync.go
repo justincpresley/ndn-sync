@@ -269,9 +269,9 @@ func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 }
 
 func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
-	missingChan := s.GetCore().MissingChan()
-	var temp uint64
 	go func() {
+		missingChan := s.GetCore().MissingChan()
+		var temp uint64
 		for {
 			select {
 			case missing, ok := <-missingChan:

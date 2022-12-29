@@ -274,9 +274,9 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 }
 
 func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
-	missingChan := s.GetCore().MissingChan()
-	var temp uint64
 	go func() {
+		missingChan := s.GetCore().MissingChan()
+		var temp uint64
 		for {
 			select {
 			case missing, ok := <-missingChan:
