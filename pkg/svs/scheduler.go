@@ -72,6 +72,26 @@ func NewScheduler(function func(), interval uint, randomness float32) Scheduler 
 	}
 }
 
+func (s *scheduler) Start(execute bool) {
+	s.done = make(chan struct{})
+	go s.target(execute)
+}
+
+func (s *scheduler) Stop() {
+	s.actions <- action{typ: actionStop}
+	<-s.done
+}
+
+func (s *scheduler) Skip()      { s.actions <- action{typ: actionSkip} }
+func (s *scheduler) Reset()     { s.actions <- action{typ: actionReset} }
+func (s *scheduler) Set(v uint) { s.actions <- action{typ: actionSet, val: uint64(v)} }
+func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint64(v)} }
+
+func (s *scheduler) TimeLeft() time.Duration {
+	return (time.Duration(atomic.LoadUint64(s.cycleTime)) * time.Millisecond) -
+		time.Since(time.Unix(0, atomic.LoadInt64(s.startTime)))
+}
+
 func (s *scheduler) target(execute bool) {
 	defer close(s.done)
 	if execute {
@@ -136,26 +156,6 @@ func (s *scheduler) target(execute bool) {
 			}
 		}
 	}
-}
-
-func (s *scheduler) Start(execute bool) {
-	s.done = make(chan struct{})
-	go s.target(execute)
-}
-
-func (s *scheduler) Stop() {
-	s.actions <- action{typ: actionStop}
-	<-s.done
-}
-
-func (s *scheduler) Skip()      { s.actions <- action{typ: actionSkip} }
-func (s *scheduler) Reset()     { s.actions <- action{typ: actionReset} }
-func (s *scheduler) Set(v uint) { s.actions <- action{typ: actionSet, val: uint64(v)} }
-func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint64(v)} }
-
-func (s *scheduler) TimeLeft() time.Duration {
-	elapsed := time.Now().UnixNano() - atomic.LoadInt64(s.startTime)
-	return time.Duration(atomic.LoadUint64(s.cycleTime))*time.Millisecond - time.Duration(elapsed)
 }
 
 func AddRandomness(value uint, randomness float32) uint {

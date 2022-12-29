@@ -70,10 +70,6 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	dataComp, _ := enc.ComponentFromStr("data")
 	syncPrefix := append(config.GroupPrefix, syncComp)
 
-	if config.DataCallback == nil {
-		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
-		return nil
-	}
 	coreConfig := &CoreConfig{
 		Source:     config.Source,
 		SyncPrefix: syncPrefix,
