@@ -51,25 +51,15 @@ func main() {
 			fmt.Println("Unfetchable")
 		}
 	}
-	updateCall := func(sync *svs.NativeSync, missing []svs.MissingData) {
-		var curr uint64
-		for _, m := range missing {
-			curr = m.LowSeqno()
-			for curr <= m.HighSeqno() {
-				sync.FetchData(m.Source(), curr)
-				curr++
-			}
-		}
-	}
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
 	config := &svs.NativeConfig{
 		Source:         nid,
 		GroupPrefix:    syncPrefix,
-		NamingScheme:   svs.HostOrientedNaming,
+		NamingScheme:   svs.SourceOrientedNaming,
 		StoragePath:    "./" + *source + "_bolt.db",
 		DataCallback:   dataCall,
-		UpdateCallback: updateCall,
+		HandlingOption: svs.NoHandling,
 	}
 	sync := svs.NewNativeSync(app, config, svs.GetDefaultConstants())
 
@@ -82,20 +72,30 @@ func main() {
 	num := 1
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
-	clock := time.NewTimer(time.Duration(*interval) * time.Millisecond)
+	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
+	recv := sync.GetCore().MissingChan()
+	var temp uint64
 	fmt.Println("Starting Count ...")
 
 loopCount:
 	for {
 		select {
-		case <-clock.C:
+		case <-send.C:
 			sync.PublishData([]byte(strconv.Itoa(num)))
 			fmt.Println("Published: " + strconv.Itoa(num))
-			clock.Reset(time.Duration(*interval) * time.Millisecond)
+			send.Reset(time.Duration(*interval) * time.Millisecond)
 			num++
+		case missing := <-recv:
+			for _, m := range *missing {
+				temp = m.LowSeqno()
+				for temp <= m.HighSeqno() {
+					fmt.Println(m.Source() + ": " + strconv.FormatUint(temp, 10))
+					temp++
+				}
+			}
 		case <-sigChannel:
-			if !clock.Stop() {
-				<-clock.C
+			if !send.Stop() {
+				<-send.C
 			}
 			logger.Infof("Received signal %+v - exiting.", sigChannel)
 			break loopCount

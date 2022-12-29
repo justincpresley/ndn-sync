@@ -74,22 +74,17 @@ func (fs BoltDB) Close() {
 
 func ensureDirectory(path string) error {
 	dir := filepath.Dir(path)
-	if _, err := os.Stat(dir); err != nil {
-		err := os.MkdirAll(dir, os.ModePerm)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return os.MkdirAll(dir, os.ModePerm)
 }
 
 func resolvePath(path string) string {
 	usr, _ := user.Current()
-	if path == "~" {
+	switch {
+	case path == "~":
 		path = usr.HomeDir
-	} else if strings.HasPrefix(path, "~/") {
+	case strings.HasPrefix(path, "~/"):
 		path = filepath.Join(usr.HomeDir, path[2:])
-	} else if strings.HasPrefix(path, "./") {
+	case strings.HasPrefix(path, "./"):
 		path, _ = filepath.Abs(path)
 	}
 	return path
