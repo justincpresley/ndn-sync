@@ -7,6 +7,17 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 
 ## [Unreleased]
 
+## [v0.0.0-alpha.8] - 2022-12-29
+## Changed
+- SVS `Core` now provides a missing channel instead of taking a missing data callback. More low-level control and efficiency were primary factors for this change as well as the listed fix.
+- SVS `Sync`s now provide a `HandlingOption` for how the missing channel will be handled. Opens the door for future options.
+- License switch to ISC. The restrictions were not very friendly.
+- Renaming of variables, functions, and types.
+- Other small changes.
+
+## Fixed
+- An out-of-sync `Core` vulnerability caused by having a very slow missing data callback. The results could range from just receiving updates late to missing data entirely.
+
 ## [v0.0.0-alpha.7] - 2022-12-27
 ## Changed
 - Completely refactored SVS `Scheduler`.
@@ -75,7 +86,8 @@ and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.7...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.8...HEAD
+[v0.0.0-alpha.8]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.7...v0.0.0-alpha.8
 [v0.0.0-alpha.7]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.6...v0.0.0-alpha.7
 [v0.0.0-alpha.6]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.5...v0.0.0-alpha.6
 [v0.0.0-alpha.5]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.4...v0.0.0-alpha.5
