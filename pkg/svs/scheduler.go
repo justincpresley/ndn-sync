@@ -88,6 +88,7 @@ func (s *scheduler) Set(v uint) { s.actions <- action{typ: actionSet, val: uint6
 func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint64(v)} }
 
 func (s *scheduler) TimeLeft() time.Duration {
+	// total interval time - time that has past = time left
 	return (time.Duration(atomic.LoadUint64(s.cycleTime)) * time.Millisecond) -
 		time.Since(time.Unix(0, atomic.LoadInt64(s.startTime)))
 }
