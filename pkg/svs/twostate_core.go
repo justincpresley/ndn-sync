@@ -124,7 +124,8 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		return
 	}
 	localNewer := c.mergeStateVector(incomingVector)
-	if c.recordStateVector(incomingVector) {
+	if CoreState(atomic.LoadInt32((*int32)(c.state))) == Suppression {
+		c.recordStateVector(incomingVector)
 		return
 	}
 	if !localNewer {
@@ -199,10 +200,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	return isNewer
 }
 
-func (c *twoStateCore) recordStateVector(incomingVector StateVector) bool {
-	if CoreState(atomic.LoadInt32((*int32)(c.state))) != Suppression {
-		return false
-	}
+func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
 	c.recordMtx.Lock()
 	defer c.recordMtx.Unlock()
 	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
@@ -210,7 +208,6 @@ func (c *twoStateCore) recordStateVector(incomingVector StateVector) bool {
 			c.record.Set(pair.Key, pair.Value, false)
 		}
 	}
-	return true
 }
 
 func (c *twoStateCore) MissingChan() chan *[]MissingData {
