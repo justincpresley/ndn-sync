@@ -22,4 +22,5 @@ type HandlingOption int
 const (
 	NoHandling            HandlingOption = 0
 	SourceCentricHandling HandlingOption = 1
+	EqualTrafficHandling  HandlingOption = 2
 )

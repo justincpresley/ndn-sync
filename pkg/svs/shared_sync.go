@@ -97,6 +97,8 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 	switch config.HandlingOption {
 	case SourceCentricHandling:
 		s.newSourceCentricHandling(hData)
+	case EqualTrafficHandling:
+		s.newEqualTrafficHandling(hData)
 	default:
 	}
 
@@ -250,7 +252,6 @@ func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 	go func() {
 		missingChan := s.GetCore().MissingChan()
-		var temp uint64
 		for {
 			select {
 			case missing, ok := <-missingChan:
@@ -258,11 +259,39 @@ func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 					data.done <- struct{}{}
 					return
 				}
-				for _, m := range *missing {
-					temp = m.LowSeqno()
-					for temp <= m.HighSeqno() {
-						s.NeedData(m.Source(), temp, data.cache)
-						temp++
+				for _, m := range missing {
+					for m.LowSeqno() <= m.HighSeqno() {
+						s.NeedData(m.Source(), m.LowSeqno(), data.cache)
+						m.Increment()
+					}
+				}
+			}
+		}
+	}()
+}
+
+func (s *sharedSync) newEqualTrafficHandling(data *sharedHandlerData) {
+	go func() {
+		missingChan := s.GetCore().MissingChan()
+		allFetched := true
+		for {
+			select {
+			case missing, ok := <-missingChan:
+				if !ok {
+					data.done <- struct{}{}
+					return
+				}
+				for {
+					allFetched = true
+					for _, m := range missing {
+						if m.LowSeqno() <= m.HighSeqno() {
+							s.NeedData(m.Source(), m.LowSeqno(), data.cache)
+							m.Increment()
+							allFetched = false
+						}
+					}
+					if allFetched {
+						break
 					}
 				}
 			}

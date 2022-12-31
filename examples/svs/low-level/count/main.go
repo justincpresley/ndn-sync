@@ -74,7 +74,6 @@ func main() {
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
 	recv := sync.GetCore().MissingChan()
-	var temp uint64
 	fmt.Println("Starting Count ...")
 
 loopCount:
@@ -86,11 +85,10 @@ loopCount:
 			send.Reset(time.Duration(*interval) * time.Millisecond)
 			num++
 		case missing := <-recv:
-			for _, m := range *missing {
-				temp = m.LowSeqno()
-				for temp <= m.HighSeqno() {
-					fmt.Println(m.Source() + ": " + strconv.FormatUint(temp, 10))
-					temp++
+			for _, m := range missing {
+				for m.LowSeqno() <= m.HighSeqno() {
+					s.NeedData(m.Source(), m.LowSeqno())
+					m.Increment()
 				}
 			}
 		case <-sigChannel:

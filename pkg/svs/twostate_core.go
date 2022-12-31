@@ -17,7 +17,7 @@ type twoStateCore struct {
 	app         *eng.Engine
 	state       *CoreState
 	constants   *Constants
-	missingChan chan *[]MissingData
+	missingChan chan []MissingData
 	syncPrefix  enc.Name
 	sourceStr   string
 	sourceSeq   uint64
@@ -37,7 +37,7 @@ func newTwoStateCore(app *eng.Engine, config *CoreConfig, constants *Constants) 
 		app:         app,
 		state:       new(CoreState),
 		constants:   constants,
-		missingChan: make(chan *[]MissingData, constants.InitialMissingChannelSize),
+		missingChan: make(chan []MissingData, constants.InitialMissingChannelSize),
 		syncPrefix:  config.SyncPrefix,
 		sourceStr:   config.Source.String(),
 		vector:      NewStateVector(),
@@ -195,7 +195,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	}
 	c.vectorMtx.Unlock()
 	if len(missing) != 0 {
-		c.missingChan <- &missing
+		c.missingChan <- missing
 	}
 	return isNewer
 }
@@ -210,6 +210,6 @@ func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
 	}
 }
 
-func (c *twoStateCore) MissingChan() chan *[]MissingData {
+func (c *twoStateCore) MissingChan() chan []MissingData {
 	return c.missingChan
 }

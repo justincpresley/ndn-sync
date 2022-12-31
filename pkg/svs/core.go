@@ -28,7 +28,7 @@ type Core interface {
 	GetSeqno() uint64
 	GetStateVector() StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
-	MissingChan() chan *[]MissingData
+	MissingChan() chan []MissingData
 }
 
 func NewCore(app *eng.Engine, config *CoreConfig, constants *Constants) Core {
