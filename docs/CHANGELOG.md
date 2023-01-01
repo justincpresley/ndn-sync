@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-## [v0.0.0-alpha.9] - 2022-01-01
+## [v0.0.0-alpha.9] - 2023-01-01
 ## Added
 - A new SVS `HandlingOption`! `EqualTrafficHandling` which spreads requests equally among the nodes. Please note that each handling option does have unique pros and cons.
 
