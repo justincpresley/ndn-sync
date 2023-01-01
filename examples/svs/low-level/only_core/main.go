@@ -66,12 +66,12 @@ func main() {
 loopCount:
 	for {
 		select {
-		// Send updates peroidically
+		// Send updates periodically
 		case <-send.C:
 			core.SetSeqno(core.Seqno() + 1)
 			send.Reset(time.Duration(*interval) * time.Millisecond)
 
-		// Receive code when avaliable
+		// Receive code when available
 		case missing := <-recv:
 			for _, m := range missing {
 				for m.LowSeqno() <= m.HighSeqno() {
