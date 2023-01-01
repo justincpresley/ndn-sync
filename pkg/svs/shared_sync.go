@@ -54,7 +54,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
 		return nil
 	}
-	coreConfig := &CoreConfig{
+	coreConfig := &TwoStateCoreConfig{
 		Source:     config.Source,
 		SyncPrefix: syncPrefix,
 	}

@@ -16,7 +16,7 @@
 
 The goal of '*Sync*' is to inform others about updates in a dataset and/or to learn
 about newly published data, effectively synchronizing data in a group.
-***ndn-sync*** welcomes both newcomers and experts.
+***ndn-sync*** welcomes both newcomers and experts of NDN.
 
 ***ndn-sync*** is implemented using the NDN library [go-ndn](https://github.com/zjkmxy/go-ndn).
 
@@ -37,6 +37,7 @@ Before you utilize ***ndn-sync*** or try any of it's examples, please ensure tha
 
 It is highly recommended that you check out the examples. Sometimes, seeing the Syncs in action can give you ideas and help you in understanding what the Syncs provide.
 
+
 ## Syncs
 
 There are many Syncs!
@@ -51,6 +52,7 @@ describes many of the Syncs that are currently known and their unique difference
 ***ndn-sync*** has the following Syncs implemented:
 
 * `svs` - **StateVectorSync**: [Details](/docs/syncs/SVS.md) | [API Documentation](https://pkg.go.dev/github.com/justincpresley/ndn-sync/pkg/svs) | [Examples](/examples/svs/README.md)
+
 
 ## License
 

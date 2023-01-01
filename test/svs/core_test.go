@@ -11,7 +11,7 @@ import (
 func TestCoreInitialState(t *testing.T) {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr("/nodename")
-	config := &svs.CoreConfig{
+	config := &svs.TwoStateCoreConfig{
 		Source:     nid,
 		SyncPrefix: syncPrefix,
 	}

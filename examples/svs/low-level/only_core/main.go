@@ -47,7 +47,7 @@ func main() {
 	nid, _ := enc.NameFromStr(*source)
 
 	fmt.Println("Activating Core ...")
-	config := &svs.CoreConfig{
+	config := &svs.TwoStateCoreConfig{
 		Source:     nid,
 		SyncPrefix: syncPrefix,
 	}

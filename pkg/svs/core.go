@@ -8,11 +8,6 @@ import (
 	ndn "github.com/zjkmxy/go-ndn/pkg/ndn"
 )
 
-type CoreConfig struct {
-	Source     enc.Name
-	SyncPrefix enc.Name
-}
-
 type Core interface {
 	Listen()
 	Activate(bool)
@@ -24,6 +19,13 @@ type Core interface {
 	Chan() chan []MissingData
 }
 
-func NewCore(app *eng.Engine, config *CoreConfig, constants *Constants) Core {
+type CoreConfig interface {*TwoStateCoreConfig}
+
+type TwoStateCoreConfig struct {
+	Source     enc.Name
+	SyncPrefix enc.Name
+}
+
+func NewCore[T CoreConfig](app *eng.Engine, config T, constants *Constants) Core {
 	return newTwoStateCore(app, config, constants)
 }

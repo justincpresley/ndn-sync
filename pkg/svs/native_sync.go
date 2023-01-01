@@ -49,7 +49,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	dataComp, _ := enc.ComponentFromStr("data")
 	syncPrefix := append(config.GroupPrefix, syncComp)
 
-	coreConfig := &CoreConfig{
+	coreConfig := &TwoStateCoreConfig{
 		Source:     config.Source,
 		SyncPrefix: syncPrefix,
 	}

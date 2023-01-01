@@ -32,7 +32,7 @@ type twoStateCore struct {
 	isActive    bool
 }
 
-func newTwoStateCore(app *eng.Engine, config *CoreConfig, constants *Constants) *twoStateCore {
+func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
 		app:         app,
 		state:       new(CoreState),
