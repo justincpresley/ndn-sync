@@ -19,7 +19,7 @@ type Core interface {
 	Chan() chan []MissingData
 }
 
-type CoreConfig interface {*TwoStateCoreConfig}
+type CoreConfig interface{ *TwoStateCoreConfig }
 
 type TwoStateCoreConfig struct {
 	Source     enc.Name

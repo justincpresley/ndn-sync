@@ -5,10 +5,13 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.9] - 2022-01-01
 ## Added
-- A new `HandlingOption`! `EqualTrafficHandling` which spreads requests equally among the nodes. Please note that each handling option does have unique pros and cons.
+- A new SVS `HandlingOption`! `EqualTrafficHandling` which spreads requests equally among the nodes. Please note that each handling option does have unique pros and cons.
 
 ## Changed
+- SVS `NewCore()` is now a generic function taking a general `CoreConfig`. Opens the door for future options.
 - Be able to alter the SVS `MissingData` structure to help track the data you still need when looping.
 - SVS `Core` now provides a `chan []MissingData` rather than `chan *[]MissingData`.
 - Go-ify all getters.
