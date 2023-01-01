@@ -35,7 +35,7 @@ type nativeSync struct {
 	datCfg       *ndn.DataConfig
 	dataComp     enc.Component
 	logger       *log.Entry
-	dataCall     func(source string, seqno uint64, data ndn.Data)
+	dataCall     func(string, uint64, ndn.Data)
 	fetchQueue   chan *nativeFetchItem
 	handleData   *nativeHandlerData
 	numFetches   *int32
@@ -166,7 +166,7 @@ func (s *nativeSync) NeedData(source string, seqno uint64) {
 }
 
 func (s *nativeSync) PublishData(content []byte) {
-	seqno := s.core.GetSeqno() + 1
+	seqno := s.core.Seqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
@@ -191,7 +191,7 @@ func (s *nativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *nativeSync) GetCore() Core {
+func (s *nativeSync) Core() Core {
 	return s.core
 }
 
@@ -256,7 +256,7 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 
 func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.GetCore().MissingChan()
+		missingChan := s.Core().MissingChan()
 		for {
 			select {
 			case missing, ok := <-missingChan:
@@ -277,7 +277,7 @@ func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 
 func (s *nativeSync) newEqualTrafficHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.GetCore().MissingChan()
+		missingChan := s.Core().MissingChan()
 		allFetched := true
 		for {
 			select {

@@ -10,9 +10,9 @@ import (
 )
 
 type Database interface {
-	Get(key []byte) (val []byte)
-	Set(key []byte, value []byte) error
-	Remove(key []byte) error
+	Get([]byte) []byte
+	Set([]byte, []byte) error
+	Remove([]byte) error
 	Close()
 }
 

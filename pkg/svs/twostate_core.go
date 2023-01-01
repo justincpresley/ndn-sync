@@ -104,11 +104,11 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 	c.scheduler.Skip()
 }
 
-func (c *twoStateCore) GetSeqno() uint64 {
+func (c *twoStateCore) Seqno() uint64 {
 	return c.sourceSeq
 }
 
-func (c *twoStateCore) GetStateVector() StateVector {
+func (c *twoStateCore) StateVector() StateVector {
 	return c.vector
 }
 

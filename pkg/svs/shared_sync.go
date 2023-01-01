@@ -162,7 +162,7 @@ func (s *sharedSync) NeedData(source string, seqno uint64, cache bool) {
 }
 
 func (s *sharedSync) PublishData(content []byte) {
-	seqno := s.core.GetSeqno() + 1
+	seqno := s.core.Seqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
@@ -187,7 +187,7 @@ func (s *sharedSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *sharedSync) GetCore() Core {
+func (s *sharedSync) Core() Core {
 	return s.core
 }
 
@@ -251,7 +251,7 @@ func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 
 func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 	go func() {
-		missingChan := s.GetCore().MissingChan()
+		missingChan := s.Core().MissingChan()
 		for {
 			select {
 			case missing, ok := <-missingChan:
@@ -272,7 +272,7 @@ func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 
 func (s *sharedSync) newEqualTrafficHandling(data *sharedHandlerData) {
 	go func() {
-		missingChan := s.GetCore().MissingChan()
+		missingChan := s.Core().MissingChan()
 		allFetched := true
 		for {
 			select {

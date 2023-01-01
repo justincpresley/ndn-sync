@@ -15,7 +15,7 @@ type SharedSync interface {
 	NeedData(string, uint64, bool)
 	PublishData([]byte)
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
-	GetCore() Core
+	Core() Core
 }
 
 type SharedConfig struct {
@@ -23,7 +23,7 @@ type SharedConfig struct {
 	GroupPrefix    enc.Name
 	HandlingOption HandlingOption
 	StoragePath    string
-	DataCallback   func(source string, seqno uint64, data ndn.Data)
+	DataCallback   func(string, uint64, ndn.Data)
 	// high-level only
 	CacheOthers bool
 }

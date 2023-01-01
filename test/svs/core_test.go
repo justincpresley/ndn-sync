@@ -16,6 +16,6 @@ func TestCoreInitialState(t *testing.T) {
 		SyncPrefix: syncPrefix,
 	}
 	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
-	assert.Equal(t, uint64(0), core.GetSeqno())
-	assert.Equal(t, svs.NewStateVector(), core.GetStateVector())
+	assert.Equal(t, uint64(0), core.Seqno())
+	assert.Equal(t, svs.NewStateVector(), core.StateVector())
 }

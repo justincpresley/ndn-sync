@@ -10,15 +10,15 @@ import (
 )
 
 type StateVector interface {
-	Set(source string, seqno uint64, oldData bool)
-	Get(source string) uint64
+	Set(string, uint64, bool)
+	Get(string) uint64
 	String() string
 	Len() int
 	Total() uint64
 	Entries() *om.OrderedMap[string, uint64]
 	ToComponent() enc.Component
 	EncodingLengths() (int, []int)
-	EncodeInto(buf []byte, lens []int) int
+	EncodeInto([]byte, []int) int
 }
 
 type stateVector struct {

@@ -68,7 +68,7 @@ loopCount:
 		select {
 		// Send updates peroidically
 		case <-send.C:
-			core.SetSeqno(core.GetSeqno() + 1)
+			core.SetSeqno(core.Seqno() + 1)
 			send.Reset(time.Duration(*interval) * time.Millisecond)
 
 		// Receive code when avaliable

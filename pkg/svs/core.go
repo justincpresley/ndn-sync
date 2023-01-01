@@ -25,8 +25,8 @@ type Core interface {
 	Activate(bool)
 	Shutdown()
 	SetSeqno(uint64)
-	GetSeqno() uint64
-	GetStateVector() StateVector
+	Seqno() uint64
+	StateVector() StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
 	MissingChan() chan []MissingData
 }
