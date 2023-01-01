@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow).
 
 ## [Unreleased]
+## Added
+- A new `HandlingOption`! `EqualTrafficHandling` which spreads requests equally among the nodes. Please note that each handling option does have unique pros and cons.
+
+## Changed
+- Be able to alter the SVS `MissingData` structure to help track the data you still need when looping.
+- SVS `Core` now provides a `chan []MissingData` rather than `chan *[]MissingData`.
+- Go-ify all getters.
 
 ## [v0.0.0-alpha.8] - 2022-12-29
 ## Changed

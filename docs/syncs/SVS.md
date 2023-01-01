@@ -13,12 +13,13 @@
 * [Reference Implementation](https://github.com/named-data/ndn-svs)
 
 
-### Sync Aspects:
+### Natural Sync Aspects:
 ```
 Dataset Representation: VectorClock
 Communication Model:    Push Notification
 Dataset Range:          Full-data
 Multicast Usage:        Yes
+Long-lived Interests:   No
 Data Naming:            Sequential
 Packet Delivery:        Out-of-order
 Strengths:              Resilient, Low Latency
