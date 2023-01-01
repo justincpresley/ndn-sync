@@ -256,7 +256,7 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 
 func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.Core().MissingChan()
+		missingChan := s.Core().Chan()
 		for {
 			select {
 			case missing, ok := <-missingChan:
@@ -277,7 +277,7 @@ func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 
 func (s *nativeSync) newEqualTrafficHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.Core().MissingChan()
+		missingChan := s.Core().Chan()
 		allFetched := true
 		for {
 			select {

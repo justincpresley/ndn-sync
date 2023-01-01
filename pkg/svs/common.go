@@ -24,3 +24,10 @@ const (
 	SourceCentricHandling HandlingOption = 1
 	EqualTrafficHandling  HandlingOption = 2
 )
+
+type CoreState int32
+
+const (
+	Steady      CoreState = 0
+	Suppression CoreState = 1
+)

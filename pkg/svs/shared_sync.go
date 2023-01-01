@@ -251,7 +251,7 @@ func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 
 func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 	go func() {
-		missingChan := s.Core().MissingChan()
+		missingChan := s.Core().Chan()
 		for {
 			select {
 			case missing, ok := <-missingChan:
@@ -272,7 +272,7 @@ func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 
 func (s *sharedSync) newEqualTrafficHandling(data *sharedHandlerData) {
 	go func() {
-		missingChan := s.Core().MissingChan()
+		missingChan := s.Core().Chan()
 		allFetched := true
 		for {
 			select {

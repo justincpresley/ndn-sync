@@ -210,6 +210,6 @@ func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
 	}
 }
 
-func (c *twoStateCore) MissingChan() chan []MissingData {
+func (c *twoStateCore) Chan() chan []MissingData {
 	return c.missingChan
 }
