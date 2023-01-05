@@ -69,11 +69,11 @@ func (om *OrderedMap[K, V]) Set(key K, value V, old bool) bool {
 	return false
 }
 
-func (om *OrderedMap[K, V]) Remove(key K) (ok bool) {
+func (om *OrderedMap[K, V]) Remove(key K) bool {
 	element, ok := om.kv[key]
 	if ok {
 		om.ll.Remove(element)
 		delete(om.kv, key)
 	}
-	return
+	return ok
 }
