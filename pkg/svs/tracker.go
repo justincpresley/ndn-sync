@@ -68,9 +68,9 @@ func (t *tracker) resetHeart(src string, hrt *heart) {
 
 func (t *tracker) Detect() {
 	currentTime := time.Now()
-	var tp int64
+	var tp time.Duration
 	for src, hrt := range t.entries {
-		tp = currentTime.Sub(hrt.lastBeat).Milliseconds()
+		tp = currentTime.Sub(hrt.lastBeat)
 		if tp > t.constants.TrackRate {
 			if hrt.status != Renewed {
 				hrt.beats = 0
@@ -87,7 +87,7 @@ func (t *tracker) Detect() {
 }
 
 func (t *tracker) UntilBeat() time.Duration {
-	return time.Until(t.selfHrt.lastBeat.Add(time.Duration(t.constants.HeartbeatRate) * time.Millisecond))
+	return time.Until(t.selfHrt.lastBeat.Add(t.constants.HeartbeatRate))
 }
 
 func (t *tracker) Status(src string) Status {

@@ -46,7 +46,7 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
-			Lifetime:    utl.IdPtr(time.Duration(constants.SyncInterestLifeTime) * time.Millisecond),
+			Lifetime:    utl.IdPtr(constants.SyncInterestLifeTime),
 		},
 	}
 	c.scheduler = NewScheduler(c.target, constants.Interval, constants.IntervalRandomness)
@@ -133,7 +133,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	} else {
 		atomic.StoreInt32((*int32)(c.state), int32(Suppression))
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
-		if uint(c.scheduler.TimeLeft().Milliseconds()) > delay {
+		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
 		}
 	}

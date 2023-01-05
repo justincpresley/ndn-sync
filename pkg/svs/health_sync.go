@@ -86,7 +86,7 @@ func (s *healthSync) newHandling(data *healthHandlerData) {
 	go func() {
 		missingChan := s.Core().Chan()
 		for {
-			if s.tracker.UntilBeat() < (time.Duration(s.constants.MonitorInterval) * time.Millisecond) {
+			if s.tracker.UntilBeat() < s.constants.MonitorInterval {
 				s.core.SetSeqno(s.core.Seqno() + 1)
 				s.tracker.Reset(s.sourceStr)
 			}
@@ -102,7 +102,7 @@ func (s *healthSync) newHandling(data *healthHandlerData) {
 				}
 			default:
 			}
-			time.Sleep(time.Duration(s.constants.MonitorInterval) * time.Millisecond)
+			time.Sleep(s.constants.MonitorInterval)
 		}
 	}()
 }
