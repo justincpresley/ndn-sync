@@ -68,7 +68,7 @@ func (t *tracker) resetHeart(src string, hrt *heart) {
 
 func (t *tracker) Detect() {
 	currentTime := time.Now()
-	var tp uint64
+	var tp int64
 	for src, hrt := range t.entries {
 		tp = currentTime.Sub(hrt.lastBeat).Milliseconds()
 		if tp > t.constants.TrackRate {
