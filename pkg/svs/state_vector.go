@@ -41,7 +41,7 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		source      enc.Name
 		seqno       enc.Nat
 		length, typ enc.TLNum
-		buf         []byte = comp.Val
+		buf         = comp.Val
 		pos, temp   int
 	)
 	// verify type
@@ -115,7 +115,7 @@ func (sv stateVector) Len() int {
 }
 
 func (sv stateVector) Total() uint64 {
-	total := uint64(0)
+	var total uint64
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		total += p.Value
 	}
@@ -139,7 +139,7 @@ func (sv stateVector) ToComponent() enc.Component {
 func (sv stateVector) EncodingLengths() (int, []int) {
 	var (
 		e, tl, nl, i int
-		ls           []int = make([]int, sv.entries.Len())
+		ls           = make([]int, sv.entries.Len())
 		n            enc.Name
 	)
 	for p := sv.entries.Front(); p != nil; p = p.Next() {

@@ -176,7 +176,7 @@ func (c *twoStateCore) sendInterest() {
 
 func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	var (
-		missing []MissingData = make([]MissingData, 0)
+		missing = make([]MissingData, 0)
 		temp    uint64
 		isNewer bool
 	)
