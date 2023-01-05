@@ -31,3 +31,11 @@ const (
 	Steady      CoreState = 0
 	Suppression CoreState = 1
 )
+
+type Status int
+
+const (
+	Unseen  Status = 0
+	Expired Status = 1
+	Renewed Status = 2
+)
