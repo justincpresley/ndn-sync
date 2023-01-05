@@ -278,7 +278,7 @@ func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 func (s *nativeSync) newEqualTrafficHandling(data *nativeHandlerData) {
 	go func() {
 		missingChan := s.Core().Chan()
-		allFetched := true
+		var allFetched bool
 		for {
 			select {
 			case missing, ok := <-missingChan:
