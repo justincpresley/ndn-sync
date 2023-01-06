@@ -5,7 +5,6 @@
 As a developer, I am focusing my efforts on the pressing next-step updates.
 
 - **svs~Utilize Schema API**: The go-ndn library recently developed a high-level api that incorporates security. This should be used for SVS to support the ability to define a trust schema (security within SVS).
-- **svs~HealthSync**: An ephemeral sync to help ensure everyone is healthy!
 
 ## Areas to Support as a Contributor
 

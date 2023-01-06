@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [v0.0.0-alpha.10] - 2023-01-06
+## Added
+- A new SVS Sync type `HealthSync`, an ephemeral sync for source health. It is still just a prototype however and STC.
+- A new SVS example to show off `HealthSync`.
+
+## Changed
+- `Constants` now holds `time.Duration` variables.  Massively simplifies many areas of the SVS code including but not limited to `Core` and `Scheduler`.
+
 ## [v0.0.0-alpha.9] - 2023-01-01
 ## Added
 - A new SVS `HandlingOption`! `EqualTrafficHandling` which spreads requests equally among the nodes. Please note that each handling option does have unique pros and cons.
@@ -95,7 +103,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.9...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.10...HEAD
+[v0.0.0-alpha.10]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.9...v0.0.0-alpha.10
 [v0.0.0-alpha.9]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.8...v0.0.0-alpha.9
 [v0.0.0-alpha.8]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.7...v0.0.0-alpha.8
 [v0.0.0-alpha.7]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.6...v0.0.0-alpha.7

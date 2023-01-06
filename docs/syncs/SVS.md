@@ -31,4 +31,5 @@ Weaknesses:             Scalability, Naming
 The Production branch **is** compatible with the Specification branch.
 
 Differences:
+* New Sync types: HealthSync, SharedSync.
 * StateVectors are ordered by Latest Entries.
