@@ -17,7 +17,6 @@ type HealthSync interface {
 type HealthConfig struct {
 	Source      enc.Name
 	GroupPrefix enc.Name
-	Handling    bool
 }
 
 func NewHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) HealthSync {

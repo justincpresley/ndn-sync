@@ -49,10 +49,8 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 	hData := &healthHandlerData{
 		done: make(chan struct{}),
 	}
-	if config.Handling {
-		s.handleData = hData
-		s.newHandling(hData)
-	}
+	s.handleData = hData
+	s.newHandling(hData)
 
 	return s
 }

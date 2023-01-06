@@ -45,7 +45,6 @@ func main() {
 	config := &svs.HealthConfig{
 		Source:      sourceName,
 		GroupPrefix: syncPrefix,
-		Handling:    true,
 	}
 	sync := svs.NewHealthSync(app, config, svs.GetDefaultConstants())
 	sync.Listen()
