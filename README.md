@@ -56,4 +56,4 @@ describes many of the Syncs that are currently known and their unique difference
 
 ## License
 
-***ndn-sync*** is an open source project licensed under the LGPL Version 2.1+. See LICENSE.md for more information.
+***ndn-sync*** is an open source project licensed under ISC. See LICENSE.md for more information.
