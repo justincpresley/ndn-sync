@@ -11,7 +11,7 @@ type Constants struct {
 	BriefInterval                  time.Duration
 	DataInterestLifeTime           time.Duration
 	DataInterestRetries            uint // 0 = no retry
-	DataPacketFressness            time.Duration
+	DataPacketFreshness            time.Duration
 	SyncInterestLifeTime           time.Duration
 	MaxConcurrentDataInterests     int32 // 0 = inf
 	InitialFetchQueueLength        uint  // only helps to mitigate allocation resizing
@@ -32,7 +32,7 @@ func GetDefaultConstants() *Constants {
 		BriefInterval:                  200 * time.Millisecond,
 		DataInterestLifeTime:           2000 * time.Millisecond,
 		DataInterestRetries:            2,
-		DataPacketFressness:            5000 * time.Millisecond,
+		DataPacketFreshness:            5000 * time.Millisecond,
 		SyncInterestLifeTime:           1000 * time.Millisecond,
 		MaxConcurrentDataInterests:     10,
 		InitialFetchQueueLength:        50,
