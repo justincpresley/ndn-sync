@@ -74,7 +74,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		},
 		datCfg: &ndn.DataConfig{
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utl.IdPtr(constants.DataPacketFressness),
+			Freshness:   utl.IdPtr(constants.DataPacketFreshness),
 		},
 		dataComp:   dataComp,
 		logger:     logger,

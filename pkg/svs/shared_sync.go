@@ -78,7 +78,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		},
 		datCfg: &ndn.DataConfig{
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utl.IdPtr(constants.DataPacketFressness),
+			Freshness:   utl.IdPtr(constants.DataPacketFreshness),
 		},
 		dataComp:   dataComp,
 		logger:     logger,
