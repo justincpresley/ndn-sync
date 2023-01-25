@@ -32,8 +32,9 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 
 	// TODO: switch to new core type (check then switch)
 	coreConfig := &TwoStateCoreConfig{
-		Source:     config.Source,
-		SyncPrefix: syncPrefix,
+		Source:         config.Source,
+		SyncPrefix:     syncPrefix,
+		FormalEncoding: config.FormalEncoding,
 	}
 	s = &healthSync{
 		app:         app,

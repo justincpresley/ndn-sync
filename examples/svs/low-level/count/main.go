@@ -60,6 +60,7 @@ func main() {
 		StoragePath:    "./" + *source + "_bolt.db",
 		DataCallback:   dataCall,
 		HandlingOption: svs.NoHandling,
+		FormalEncoding: false,
 	}
 	sync := svs.NewNativeSync(app, config, svs.GetDefaultConstants())
 

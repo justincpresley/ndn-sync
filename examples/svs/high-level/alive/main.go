@@ -43,8 +43,9 @@ func main() {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	sourceName, _ := enc.NameFromStr(*source)
 	config := &svs.HealthConfig{
-		Source:      sourceName,
-		GroupPrefix: syncPrefix,
+		Source:         sourceName,
+		GroupPrefix:    syncPrefix,
+		FormalEncoding: false,
 	}
 	sync := svs.NewHealthSync(app, config, svs.GetDefaultConstants())
 	sync.Listen()

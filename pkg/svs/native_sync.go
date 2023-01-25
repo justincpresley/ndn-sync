@@ -50,8 +50,9 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 	syncPrefix := append(config.GroupPrefix, syncComp)
 
 	coreConfig := &TwoStateCoreConfig{
-		Source:     config.Source,
-		SyncPrefix: syncPrefix,
+		Source:         config.Source,
+		SyncPrefix:     syncPrefix,
+		FormalEncoding: config.FormalEncoding,
 	}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {

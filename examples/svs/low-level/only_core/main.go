@@ -48,8 +48,9 @@ func main() {
 
 	fmt.Println("Activating Core ...")
 	config := &svs.TwoStateCoreConfig{
-		Source:     nid,
-		SyncPrefix: syncPrefix,
+		Source:         nid,
+		SyncPrefix:     syncPrefix,
+		FormalEncoding: false,
 	}
 	core := svs.NewCore(app, config, svs.GetDefaultConstants())
 	core.Listen()

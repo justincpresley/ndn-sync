@@ -22,8 +22,9 @@ type Core interface {
 type CoreConfig interface{ *TwoStateCoreConfig }
 
 type TwoStateCoreConfig struct {
-	Source     enc.Name
-	SyncPrefix enc.Name
+	Source         enc.Name
+	SyncPrefix     enc.Name
+	FormalEncoding bool
 }
 
 func NewCore[T CoreConfig](app *eng.Engine, config T, constants *Constants) Core {

@@ -25,6 +25,7 @@ type NativeConfig struct {
 	HandlingOption HandlingOption
 	StoragePath    string
 	DataCallback   func(source string, seqno uint64, data ndn.Data)
+	FormalEncoding bool
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) NativeSync {
@@ -39,5 +40,6 @@ func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source 
 		HandlingOption: SourceCentricHandling,
 		StoragePath:    "./" + source.String() + "_bolt.db",
 		DataCallback:   callback,
+		FormalEncoding: false,
 	}
 }

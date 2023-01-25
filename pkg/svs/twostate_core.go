@@ -28,6 +28,7 @@ type twoStateCore struct {
 	intCfg      *ndn.InterestConfig
 	vectorMtx   sync.Mutex
 	recordMtx   sync.Mutex
+	formal      bool
 	isListening bool
 	isActive    bool
 }
@@ -48,6 +49,7 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 			CanBePrefix: true,
 			Lifetime:    utl.IdPtr(constants.SyncInterestLifeTime),
 		},
+		formal: config.FormalEncoding,
 	}
 	c.scheduler = NewScheduler(c.target, constants.Interval, constants.IntervalRandomness)
 	return c
@@ -118,7 +120,7 @@ func (c *twoStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire,
 
 func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	// TODO: VERIFY THE INTEREST
-	incomingVector, err := ParseStateVector(interest.Name()[len(interest.Name())-2])
+	incomingVector, err := ParseStateVector(interest.Name()[len(interest.Name())-2], c.formal)
 	if err != nil {
 		c.logger.Warnf("Received unparsable statevector: %+v", err)
 		return
@@ -155,7 +157,7 @@ func (c *twoStateCore) sendInterest() {
 	// TODO: SIGN THE INTEREST WITH AUTHENTICATABLE KEY
 	// WARNING: SHA SIGNER PROVIDES NOTHING (signature only includes the appParams) & IS ONLY PLACEHOLDER
 	c.vectorMtx.Lock()
-	name := append(c.syncPrefix, c.vector.ToComponent())
+	name := append(c.syncPrefix, c.vector.ToComponent(c.formal))
 	c.vectorMtx.Unlock()
 	wire, _, finalName, err := c.app.Spec().MakeInterest(
 		name, c.intCfg, enc.Wire{}, sec.NewSha256IntSigner(c.app.Timer()),

@@ -28,8 +28,9 @@ Weaknesses:             Scalability, Naming
 
 
 ### Production Differences:
-The Production branch **is** compatible with the Specification branch.
+The Production branch **is** compatible with the Specification branch **if** using FormalEncoding.
 
 Differences:
 * New Sync types: HealthSync, SharedSync.
-* StateVectors are ordered by Latest Entries.
+* StateVectors are ordered via Latest Entries (descending in freshness).
+* Optimized Informal StateVector Encoding

@@ -55,8 +55,9 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		return nil
 	}
 	coreConfig := &TwoStateCoreConfig{
-		Source:     config.Source,
-		SyncPrefix: syncPrefix,
+		Source:         config.Source,
+		SyncPrefix:     syncPrefix,
+		FormalEncoding: config.FormalEncoding,
 	}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {

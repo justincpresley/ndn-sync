@@ -24,6 +24,7 @@ type SharedConfig struct {
 	HandlingOption HandlingOption
 	StoragePath    string
 	DataCallback   func(string, uint64, ndn.Data)
+	FormalEncoding bool
 	// high-level only
 	CacheOthers bool
 }
@@ -39,6 +40,7 @@ func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source 
 		HandlingOption: SourceCentricHandling,
 		StoragePath:    "./" + source.String() + "_bolt.db",
 		DataCallback:   callback,
+		FormalEncoding: false,
 		CacheOthers:    true,
 	}
 }

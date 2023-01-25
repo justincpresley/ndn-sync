@@ -34,12 +34,12 @@ func TestStateVectorLoop(t *testing.T) {
 	assert.Equal(t, sv, nsv)
 }
 
-func TestStateVectorEncodeDecode(t *testing.T) {
+func TestStateVectorFormalEncodeDecode(t *testing.T) {
 	sv := svs.NewStateVector()
 	sv.Set("/one", 1, true)
 	sv.Set("/two", 2, true)
-	comp := sv.ToComponent()
-	nsv, _ := svs.ParseStateVector(comp)
+	comp := sv.ToComponent(true)
+	nsv, _ := svs.ParseStateVector(comp, true)
 	assert.Equal(t, uint64(1), nsv.Get("/one"))
 	assert.Equal(t, uint64(2), nsv.Get("/two"))
 	assert.Equal(t, uint64(3), nsv.Total())
@@ -47,9 +47,31 @@ func TestStateVectorEncodeDecode(t *testing.T) {
 	assert.Equal(t, sv, nsv)
 }
 
-func TestStateVectorDecodeStatic(t *testing.T) {
+func TestStateVectorInformalEncodeDecode(t *testing.T) {
+	sv := svs.NewStateVector()
+	sv.Set("/one", 1, true)
+	sv.Set("/two", 2, true)
+	comp := sv.ToComponent(false)
+	nsv, _ := svs.ParseStateVector(comp, false)
+	assert.Equal(t, uint64(1), nsv.Get("/one"))
+	assert.Equal(t, uint64(2), nsv.Get("/two"))
+	assert.Equal(t, uint64(3), nsv.Total())
+	assert.Equal(t, int(2), nsv.Len())
+	assert.Equal(t, sv, nsv)
+}
+
+func TestStateVectorFormalDecodeStatic(t *testing.T) {
 	comp, _ := enc.ComponentFromBytes([]byte{201, 24, 202, 10, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 202, 10, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2})
-	sv, _ := svs.ParseStateVector(comp)
+	sv, _ := svs.ParseStateVector(comp, true)
+	assert.Equal(t, uint64(1), sv.Get("/one"))
+	assert.Equal(t, uint64(2), sv.Get("/two"))
+	assert.Equal(t, uint64(3), sv.Total())
+	assert.Equal(t, int(2), sv.Len())
+}
+
+func TestStateVectorInformalDecodeStatic(t *testing.T) {
+	comp, _ := enc.ComponentFromBytes([]byte{201, 20, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2})
+	sv, _ := svs.ParseStateVector(comp, false)
 	assert.Equal(t, uint64(1), sv.Get("/one"))
 	assert.Equal(t, uint64(2), sv.Get("/two"))
 	assert.Equal(t, uint64(3), sv.Total())
