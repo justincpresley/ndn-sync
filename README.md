@@ -31,7 +31,7 @@ about newly published data, effectively synchronizing data in a group.
 
 ## Usage
 
-Before you utilize ***ndn-sync*** or try any of it's examples, please ensure that you have the necessary [prerequisites](/docs/INSTALL.md). It will take but a few minutes!
+Before you utilize ***ndn-sync*** or try any of its examples, please ensure that you have the necessary [prerequisites](/docs/INSTALL.md). It will take but a few minutes!
 
 ***ndn-sync*** is a library containing multiple modules (different Syncs), each with individual functionality and use.
 

@@ -17,10 +17,11 @@ There are many forwarders available:
 * **YaNFD**: [Yet-another NDN Forwarding Daemon](https://github.com/named-data/YaNFD)
 * **NDN-DPDK**: [NDN Data Plane Development Kit](https://github.com/usnistgov/ndn-dpdk)
 
-However, ***ndn-sync*** currently only supports **NFD** until more support is added to [go-ndn](https://github.com/zjkmxy/go-ndn). While **NFD** does have [nice documentation](https://named-data.net/doc/NFD/current/INSTALL.html) for installation, I prefer to use [yoursunny's nightly APT repository](https://yoursunny.com/t/2021/NFD-nightly-usage/).
+However, ***ndn-sync*** relies on [go-ndn](https://github.com/zjkmxy/go-ndn) for its forwarder support. As such, ***ndn-sync*** supports **NFD** and **YaNFD** only.
 
-You can test that **NFD** is properly installed by running `nfd-start` and than `nfd-status`.
+While **NFD** does have [nice documentation](https://named-data.net/doc/NFD/current/INSTALL.html) for installation, I prefer to use [yoursunny's nightly APT repository](https://yoursunny.com/t/2021/NFD-nightly-usage/).
 
+You can test that **NFD** is properly installed by running `nfd-start` and than `nfd-status`. **YaNFD** does not directly install into *systemd* as a service. Instead, it must be self-started via `yanfd`.
 
 ## Using this Library
 
