@@ -6,6 +6,9 @@
 
 </div>
 
+> **Warning**
+> This Sync is currently vulnerable to many attacks due to the lack of security and should not be used in a production environment.
+
 
 ### Helpful Links:
 * [Technical Report](https://named-data.net/wp-content/uploads/2021/07/ndn-0073-r2-SVS.pdf)

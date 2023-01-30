@@ -21,7 +21,7 @@ However, ***ndn-sync*** relies on [go-ndn](https://github.com/zjkmxy/go-ndn) for
 
 While **NFD** does have [nice documentation](https://named-data.net/doc/NFD/current/INSTALL.html) for installation, I prefer to use [yoursunny's nightly APT repository](https://yoursunny.com/t/2021/NFD-nightly-usage/).
 
-You can test that **NFD** is properly installed by running `nfd-start` and than `nfd-status`. **YaNFD** does not directly install into *systemd* as a service. Instead, it must be self-started via `yanfd`.
+You can test that **NFD** is properly installed by running `nfd-start` and then `nfd-status`. **YaNFD** does not directly install into *systemd* as a service. Instead, it must be self-started via `yanfd`.
 
 ## Using this Library
 
