@@ -14,6 +14,7 @@
 * [Technical Report](https://named-data.net/wp-content/uploads/2021/07/ndn-0073-r2-SVS.pdf)
 * [Specification](https://named-data.github.io/StateVectorSync/)
 * [Reference Implementation](https://github.com/named-data/ndn-svs)
+* [Scalability Paper](https://dl.acm.org/doi/pdf/10.1145/3517212.3559485)
 
 
 ### Natural Sync Aspects:
@@ -27,11 +28,12 @@ Data Naming:            Sequential
 Packet Delivery:        Out-of-order
 Strengths:              Resilient, Low Latency
 Weaknesses:             Scalability, Naming
+Additional Notes:       Key Establishment for Group
 ```
 
 
 ### Production Differences:
-The Production branch **is** compatible with the Specification branch **if** using FormalEncoding.
+The [Production branch](https://github.com/justincpresley/ndn-sync/tree/production) **is** compatible with the [Specification branch](https://github.com/justincpresley/ndn-sync/tree/specification) **if** using FormalEncoding.
 
 Differences:
 * New Sync types: HealthSync, SharedSync.
