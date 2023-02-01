@@ -17,11 +17,6 @@ type StateVector interface {
 	Total() uint64
 	Entries() *om.OrderedMap[string, uint64]
 	ToComponent(bool) enc.Component
-	Encode(bool) []byte
-	FormalEncodingLengths() (int, []int)
-	FormalEncodeInto([]byte, []int) int
-	InformalEncodingLength() int
-	InformalEncodeInto(buf []byte) int
 }
 
 type stateVector struct {
@@ -85,24 +80,24 @@ func (sv stateVector) Entries() *om.OrderedMap[string, uint64] {
 func (sv stateVector) ToComponent(formal bool) enc.Component {
 	return enc.Component{
 		Typ: TypeVector,
-		Val: sv.Encode(formal),
+		Val: sv.encodeVector(formal),
 	}
 }
 
-func (sv stateVector) Encode(formal bool) []byte {
+func (sv stateVector) encodeVector(formal bool) []byte {
 	if formal {
-		tl, ls := sv.FormalEncodingLengths()
+		tl, ls := sv.formalEncodingLengths()
 		buf := make([]byte, tl)
-		sv.FormalEncodeInto(buf, ls)
+		sv.formalEncodeInto(buf, ls)
 		return buf
 	} else {
-		buf := make([]byte, sv.InformalEncodingLength())
-		sv.InformalEncodeInto(buf)
+		buf := make([]byte, sv.informalEncodingLength())
+		sv.informalEncodeInto(buf)
 		return buf
 	}
 }
 
-func (sv stateVector) FormalEncodingLengths() (int, []int) {
+func (sv stateVector) formalEncodingLengths() (int, []int) {
 	var (
 		e, tl, nl, i int
 		ls           = make([]int, sv.entries.Len())
@@ -129,7 +124,7 @@ func (sv stateVector) FormalEncodingLengths() (int, []int) {
 	return tl, ls
 }
 
-func (sv stateVector) FormalEncodeInto(buf []byte, ls []int) int {
+func (sv stateVector) formalEncodeInto(buf []byte, ls []int) int {
 	var (
 		el, off, pos, i int
 		n               enc.Name
@@ -155,7 +150,7 @@ func (sv stateVector) FormalEncodeInto(buf []byte, ls []int) int {
 	return pos
 }
 
-func (sv stateVector) InformalEncodingLength() int {
+func (sv stateVector) informalEncodingLength() int {
 	var (
 		e, nl int
 		n     enc.Name
@@ -175,7 +170,7 @@ func (sv stateVector) InformalEncodingLength() int {
 	return e
 }
 
-func (sv stateVector) InformalEncodeInto(buf []byte) int {
+func (sv stateVector) informalEncodeInto(buf []byte) int {
 	var (
 		pos int
 		n   enc.Name

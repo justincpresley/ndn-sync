@@ -2,7 +2,7 @@ package svs
 
 import (
 	"math/rand"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
@@ -16,7 +16,6 @@ const (
 	actionSkip
 	actionReset
 	actionSet
-	actionAdd
 )
 
 type Scheduler interface {
@@ -25,7 +24,6 @@ type Scheduler interface {
 	Skip()
 	Reset()
 	Set(time.Duration)
-	Add(time.Duration)
 	TimeLeft() time.Duration
 }
 
@@ -35,8 +33,9 @@ type scheduler struct {
 	randomness float32
 	actions    chan action
 	timer      *time.Timer
-	cycleTime  *int64
-	startTime  *int64
+	cycleTime  int64
+	startTime  int64
+	mtx        sync.Mutex
 	done       chan struct{}
 }
 
@@ -46,8 +45,6 @@ func NewScheduler(function func(), interval time.Duration, randomness float32) S
 		interval:   interval,
 		randomness: randomness,
 		actions:    make(chan action, 3),
-		cycleTime:  new(int64),
-		startTime:  new(int64),
 	}
 }
 
@@ -64,12 +61,13 @@ func (s *scheduler) Stop() {
 func (s *scheduler) Skip()               { s.actions <- action{typ: actionSkip} }
 func (s *scheduler) Reset()              { s.actions <- action{typ: actionReset} }
 func (s *scheduler) Set(v time.Duration) { s.actions <- action{typ: actionSet, val: int64(v)} }
-func (s *scheduler) Add(v time.Duration) { s.actions <- action{typ: actionAdd, val: int64(v)} }
 
 func (s *scheduler) TimeLeft() time.Duration {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 	// total interval time - time that has past = time left
-	return time.Duration(atomic.LoadInt64(s.cycleTime)) -
-		time.Since(time.Unix(0, atomic.LoadInt64(s.startTime)))
+	return time.Duration(s.cycleTime) -
+		time.Since(time.Unix(0, s.startTime))
 }
 
 func (s *scheduler) target(execute bool) {
@@ -78,16 +76,20 @@ func (s *scheduler) target(execute bool) {
 		s.function()
 	}
 	temp := AddRandomness(s.interval, s.randomness)
-	atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-	atomic.StoreInt64(s.cycleTime, int64(temp))
+	s.mtx.Lock()
+	s.startTime = time.Now().UnixNano()
+	s.cycleTime = int64(temp)
+	s.mtx.Unlock()
 	s.timer = time.NewTimer(temp)
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
 			temp = AddRandomness(s.interval, s.randomness)
-			atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-			atomic.StoreInt64(s.cycleTime, int64(temp))
+			s.mtx.Lock()
+			s.startTime = time.Now().UnixNano()
+			s.cycleTime = int64(temp)
+			s.mtx.Unlock()
 			if !s.timer.Stop() {
 				select {
 				case <-s.timer.C:
@@ -110,8 +112,10 @@ func (s *scheduler) target(execute bool) {
 				fallthrough
 			case actionReset:
 				temp = AddRandomness(s.interval, s.randomness)
-				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-				atomic.StoreInt64(s.cycleTime, int64(temp))
+				s.mtx.Lock()
+				s.startTime = time.Now().UnixNano()
+				s.cycleTime = int64(temp)
+				s.mtx.Unlock()
 				if !s.timer.Stop() {
 					select {
 					case <-s.timer.C:
@@ -119,12 +123,11 @@ func (s *scheduler) target(execute bool) {
 					}
 				}
 				s.timer.Reset(temp)
-			case actionAdd:
-				a.val += atomic.LoadInt64(s.cycleTime)
-				fallthrough
 			case actionSet:
-				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-				atomic.StoreInt64(s.cycleTime, a.val)
+				s.mtx.Lock()
+				s.startTime = time.Now().UnixNano()
+				s.cycleTime = a.val
+				s.mtx.Unlock()
 				if !s.timer.Stop() {
 					select {
 					case <-s.timer.C:
