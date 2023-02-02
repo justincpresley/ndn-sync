@@ -2,6 +2,7 @@ package svs
 
 import (
 	"time"
+	"sync"
 )
 
 type Tracker interface {
@@ -19,37 +20,32 @@ type heart struct {
 }
 
 type tracker struct {
-	entries   map[string]*heart
+	entries   sync.Map
 	constants *Constants
 	statChan  chan StatusChange
 	selfHrt   *heart
-	selfSrc   string
 }
 
-func NewTracker(self string, cs *Constants) Tracker {
-	s := &tracker{
-		entries:   make(map[string]*heart),
+func NewTracker(src string, cs *Constants) Tracker {
+	t := &tracker{
 		constants: cs,
 		statChan:  make(chan StatusChange, cs.InitialStatusChangeChannelSize),
-		selfSrc:   self,
-		selfHrt:   &heart{status: Expired},
 	}
-	s.statChan <- NewStatusChange(self, Unseen, Expired)
-	return s
+	hrt := &heart{status: Expired}
+	t.entries.Store(src, hrt)
+	t.selfHrt = hrt
+	t.statChan <- NewStatusChange(src, Unseen, Expired)
+	return t
 }
 
 func (t *tracker) Reset(src string) {
-	if src == t.selfSrc {
-		t.resetHeart(t.selfSrc, t.selfHrt)
-		return
-	}
-	hrt, exists := t.entries[src]
-	if !exists {
+	hrt, ok := t.entries.Load(src)
+	if !ok {
+		t.entries.Store(src, &heart{status: Expired})
 		t.statChan <- NewStatusChange(src, Unseen, Expired)
-		t.entries[src] = &heart{status: Expired}
 		return
 	}
-	t.resetHeart(src, hrt)
+	t.resetHeart(src, hrt.(*heart))
 }
 
 func (t *tracker) resetHeart(src string, hrt *heart) {
@@ -70,8 +66,15 @@ func (t *tracker) Detect() {
 	var (
 		currentTime = time.Now()
 		tp          time.Duration
+		src         string
+		hrt         *heart
 	)
-	for src, hrt := range t.entries {
+	t.entries.Range(func(key, value any) bool {
+		src = key.(string)
+		hrt = value.(*heart)
+		if hrt == t.selfHrt {
+			return true
+		}
 		tp = currentTime.Sub(hrt.lastBeat)
 		if tp > t.constants.TrackRate {
 			if hrt.status != Renewed {
@@ -85,7 +88,8 @@ func (t *tracker) Detect() {
 				}
 			}
 		}
-	}
+		return true
+	})
 }
 
 func (t *tracker) UntilBeat() time.Duration {
@@ -93,14 +97,11 @@ func (t *tracker) UntilBeat() time.Duration {
 }
 
 func (t *tracker) Status(src string) Status {
-	if src == t.selfSrc {
-		return t.selfHrt.status
-	}
-	hrt, ok := t.entries[src]
+	hrt, ok := t.entries.Load(src)
 	if !ok {
 		return Unseen
 	}
-	return hrt.status
+	return hrt.(*heart).status
 }
 
 func (t *tracker) Chan() chan StatusChange {
