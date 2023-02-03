@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [v0.0.0-alpha.11] - 2023-02-03
 ## Added
-- A new Optimized `StateVector` Encoding! Reduces 2+ bytes per entry.
+- A new Optimized `StateVector` Encoding! Reduces 2+ bytes per entry. Set `FormalEncoding` to `false` to activate it.
 
 ## Changed
 - Misspelling within SVS `Constants`.
