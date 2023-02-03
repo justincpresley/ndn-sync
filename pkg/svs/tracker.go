@@ -1,8 +1,8 @@
 package svs
 
 import (
-	"time"
 	"sync"
+	"time"
 )
 
 type Tracker interface {

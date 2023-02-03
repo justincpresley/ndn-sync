@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [v0.0.0-alpha.11] - 2023-02-03
+## Added
+- A new Optimized `StateVector` Encoding! Reduces 2+ bytes per entry.
+
+## Changed
+- Misspelling within SVS `Constants`.
+- Updated dependencies.
+
+## Fixed
+- Data race within `Scheduler` with the pairing of `startTime` and `cycleTime`.
+- Data race when resetting `heart`s within the `Tracker` of `HealthSync`.
+
+## Removed
+- Scheduler's `Add()` due to no-use. However, it can still be achieved via `Set( someTime + TimeLeft() )`.
+
 ## [v0.0.0-alpha.10] - 2023-01-06
 ## Added
 - A new SVS Sync type `HealthSync`, an ephemeral sync for source health. It is still just a prototype however and STC.
@@ -103,7 +118,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.10...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.11...HEAD
+[v0.0.0-alpha.11]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.10...v0.0.0-alpha.11
 [v0.0.0-alpha.10]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.9...v0.0.0-alpha.10
 [v0.0.0-alpha.9]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.8...v0.0.0-alpha.9
 [v0.0.0-alpha.8]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.7...v0.0.0-alpha.8
