@@ -7,7 +7,7 @@
 </div>
 
 > **Warning**
-> This Sync is currently vulnerable to many attacks due to the lack of security and should not be used in a production environment.
+> This Sync is currently vulnerable to many attacks due to security not being 'filled-in' and should not be used in a production environment until this notice is removed.
 
 
 ### Helpful Links:
@@ -17,7 +17,7 @@
 * [Scalability Paper](https://dl.acm.org/doi/pdf/10.1145/3517212.3559485)
 
 
-### Natural Sync Aspects:
+### Natural Aspects:
 ```
 Dataset Representation: VectorClock
 Communication Model:    Push Notification
