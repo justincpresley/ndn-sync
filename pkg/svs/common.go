@@ -23,3 +23,10 @@ const (
 	NoHandling            HandlingOption = 0
 	SourceCentricHandling HandlingOption = 1
 )
+
+type CoreState int32
+
+const (
+	Steady      CoreState = 0
+	Suppression CoreState = 1
+)

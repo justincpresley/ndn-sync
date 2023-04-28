@@ -8,27 +8,20 @@ import (
 	ndn "github.com/zjkmxy/go-ndn/pkg/ndn"
 )
 
-type CoreState int32
-
-const (
-	Steady      CoreState = 0
-	Suppression CoreState = 1
-)
-
-type CoreConfig struct {
-	Source     enc.Name
-	SyncPrefix enc.Name
-}
-
 type Core interface {
 	Listen()
 	Activate(bool)
 	Shutdown()
 	SetSeqno(uint64)
-	GetSeqno() uint64
-	GetStateVector() StateVector
+	Seqno() uint64
+	StateVector() StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
-	MissingChan() chan *[]MissingData
+	Chan() chan []MissingData
+}
+
+type CoreConfig struct {
+	Source     enc.Name
+	SyncPrefix enc.Name
 }
 
 func NewCore(app *eng.Engine, config *CoreConfig, constants *Constants) Core {

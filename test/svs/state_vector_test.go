@@ -1,4 +1,4 @@
-package svs
+package svs_test
 
 import (
 	"testing"

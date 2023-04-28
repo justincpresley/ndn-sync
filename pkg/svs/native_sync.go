@@ -35,7 +35,7 @@ type nativeSync struct {
 	datCfg       *ndn.DataConfig
 	dataComp     enc.Component
 	logger       *log.Entry
-	dataCall     func(source string, seqno uint64, data ndn.Data)
+	dataCall     func(string, uint64, ndn.Data)
 	fetchQueue   chan *nativeFetchItem
 	handleData   *nativeHandlerData
 	numFetches   *int32
@@ -70,11 +70,11 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
-			Lifetime:    utl.IdPtr(time.Duration(constants.DataInterestLifeTime) * time.Millisecond),
+			Lifetime:    utl.IdPtr(constants.DataInterestLifeTime),
 		},
 		datCfg: &ndn.DataConfig{
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utl.IdPtr(time.Duration(constants.DataPacketFressness) * time.Millisecond),
+			Freshness:   utl.IdPtr(constants.DataPacketFreshness),
 		},
 		dataComp:   dataComp,
 		logger:     logger,
@@ -164,7 +164,7 @@ func (s *nativeSync) NeedData(source string, seqno uint64) {
 }
 
 func (s *nativeSync) PublishData(content []byte) {
-	seqno := s.core.GetSeqno() + 1
+	seqno := s.core.Seqno() + 1
 	name := s.getDataName(s.sourceStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
@@ -189,7 +189,7 @@ func (s *nativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	s.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (s *nativeSync) GetCore() Core {
+func (s *nativeSync) Core() Core {
 	return s.core
 }
 
@@ -254,8 +254,7 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 
 func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.GetCore().MissingChan()
-		var temp uint64
+		missingChan := s.Core().Chan()
 		for {
 			select {
 			case missing, ok := <-missingChan:
@@ -263,11 +262,10 @@ func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 					data.done <- struct{}{}
 					return
 				}
-				for _, m := range *missing {
-					temp = m.LowSeqno()
-					for temp <= m.HighSeqno() {
-						s.NeedData(m.Source(), temp)
-						temp++
+				for _, m := range missing {
+					for m.LowSeqno() <= m.HighSeqno() {
+						s.NeedData(m.Source(), m.LowSeqno())
+						m.Increment()
 					}
 				}
 			}

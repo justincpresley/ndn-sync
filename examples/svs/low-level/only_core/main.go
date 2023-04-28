@@ -60,8 +60,7 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
-	recv := core.MissingChan()
-	var temp uint64
+	recv := core.Chan()
 	fmt.Println("Reporting all updates only while updating Core.")
 
 loopCount:
@@ -69,16 +68,15 @@ loopCount:
 		select {
 		// Send updates peroidically
 		case <-send.C:
-			core.SetSeqno(core.GetSeqno() + 1)
+			core.SetSeqno(core.Seqno() + 1)
 			send.Reset(time.Duration(*interval) * time.Millisecond)
 
 		// Receive code when avaliable
 		case missing := <-recv:
-			for _, m := range *missing {
-				temp = m.LowSeqno()
-				for temp <= m.HighSeqno() {
-					fmt.Println(m.Source() + ": " + strconv.FormatUint(temp, 10))
-					temp++
+			for _, m := range missing {
+				for m.LowSeqno() <= m.HighSeqno() {
+					fmt.Println(m.Source() + ": " + strconv.FormatUint(m.LowSeqno(), 10))
+					m.Increment()
 				}
 			}
 

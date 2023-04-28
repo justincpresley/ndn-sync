@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	log "github.com/apex/log"
 	kyb "github.com/eiannone/keyboard"
@@ -21,6 +22,7 @@ func passAll(enc.Name, enc.Wire, ndn.Signature) bool {
 
 func main() {
 	var input string
+	var inputMutex sync.Mutex
 
 	log.SetLevel(log.WarnLevel) // Change to "InfoLevel" to Look at Interests
 	logger := log.WithField("module", "main")
@@ -45,6 +47,7 @@ func main() {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	sourceName, _ := enc.NameFromStr(*source)
 	callback := func(source string, seqno uint64, data ndn.Data) {
+		inputMutex.Lock()
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
 			fmt.Println(source + ": " + string(data.Content().Join()))
@@ -52,6 +55,7 @@ func main() {
 			fmt.Println("Unfetchable")
 		}
 		fmt.Print(input)
+		inputMutex.Unlock()
 	}
 	sync := svs.NewNativeSync(app, svs.GetBasicNativeConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
 	sync.Listen()
@@ -74,6 +78,7 @@ InputLoop:
 		if err != nil {
 			panic(err)
 		}
+		inputMutex.Lock()
 		switch key {
 		case kyb.KeyEnter:
 			fmt.Print("\n\033[1F\033[K")
@@ -105,6 +110,7 @@ InputLoop:
 			input += string(char)
 			fmt.Printf(string(char))
 		}
+		inputMutex.Unlock()
 	}
 
 	err = os.Remove("./" + *source + "_bolt.db")

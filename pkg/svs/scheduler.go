@@ -2,13 +2,13 @@ package svs
 
 import (
 	"math/rand"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
 type action struct {
 	typ int
-	val uint64
+	val int64
 }
 
 const (
@@ -16,7 +16,6 @@ const (
 	actionSkip
 	actionReset
 	actionSet
-	actionAdd
 )
 
 type Scheduler interface {
@@ -24,30 +23,28 @@ type Scheduler interface {
 	Stop()
 	Skip()
 	Reset()
-	Set(uint)
-	Add(uint)
+	Set(time.Duration)
 	TimeLeft() time.Duration
 }
 
 type scheduler struct {
 	function   func()
-	interval   uint
+	interval   time.Duration
 	randomness float32
 	actions    chan action
 	timer      *time.Timer
-	cycleTime  *uint64
-	startTime  *int64
+	cycleTime  int64
+	startTime  int64
+	mtx        sync.Mutex
 	done       chan struct{}
 }
 
-func NewScheduler(function func(), interval uint, randomness float32) Scheduler {
+func NewScheduler(function func(), interval time.Duration, randomness float32) Scheduler {
 	return &scheduler{
 		function:   function,
 		interval:   interval,
 		randomness: randomness,
 		actions:    make(chan action, 3),
-		cycleTime:  new(uint64),
-		startTime:  new(int64),
 	}
 }
 
@@ -61,15 +58,16 @@ func (s *scheduler) Stop() {
 	<-s.done
 }
 
-func (s *scheduler) Skip()      { s.actions <- action{typ: actionSkip} }
-func (s *scheduler) Reset()     { s.actions <- action{typ: actionReset} }
-func (s *scheduler) Set(v uint) { s.actions <- action{typ: actionSet, val: uint64(v)} }
-func (s *scheduler) Add(v uint) { s.actions <- action{typ: actionAdd, val: uint64(v)} }
+func (s *scheduler) Skip()               { s.actions <- action{typ: actionSkip} }
+func (s *scheduler) Reset()              { s.actions <- action{typ: actionReset} }
+func (s *scheduler) Set(v time.Duration) { s.actions <- action{typ: actionSet, val: int64(v)} }
 
 func (s *scheduler) TimeLeft() time.Duration {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 	// total interval time - time that has past = time left
-	return (time.Duration(atomic.LoadUint64(s.cycleTime)) * time.Millisecond) -
-		time.Since(time.Unix(0, atomic.LoadInt64(s.startTime)))
+	return time.Duration(s.cycleTime) -
+		time.Since(time.Unix(0, s.startTime))
 }
 
 func (s *scheduler) target(execute bool) {
@@ -78,23 +76,27 @@ func (s *scheduler) target(execute bool) {
 		s.function()
 	}
 	temp := AddRandomness(s.interval, s.randomness)
-	atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-	atomic.StoreUint64(s.cycleTime, uint64(temp))
-	s.timer = time.NewTimer(time.Duration(temp) * time.Millisecond)
+	s.mtx.Lock()
+	s.startTime = time.Now().UnixNano()
+	s.cycleTime = int64(temp)
+	s.mtx.Unlock()
+	s.timer = time.NewTimer(temp)
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
 			temp = AddRandomness(s.interval, s.randomness)
-			atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-			atomic.StoreUint64(s.cycleTime, uint64(temp))
+			s.mtx.Lock()
+			s.startTime = time.Now().UnixNano()
+			s.cycleTime = int64(temp)
+			s.mtx.Unlock()
 			if !s.timer.Stop() {
 				select {
 				case <-s.timer.C:
 				default:
 				}
 			}
-			s.timer.Reset(time.Duration(temp) * time.Millisecond)
+			s.timer.Reset(temp)
 		case a := <-s.actions:
 			switch a.typ {
 			case actionStop:
@@ -110,35 +112,36 @@ func (s *scheduler) target(execute bool) {
 				fallthrough
 			case actionReset:
 				temp = AddRandomness(s.interval, s.randomness)
-				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-				atomic.StoreUint64(s.cycleTime, uint64(temp))
+				s.mtx.Lock()
+				s.startTime = time.Now().UnixNano()
+				s.cycleTime = int64(temp)
+				s.mtx.Unlock()
 				if !s.timer.Stop() {
 					select {
 					case <-s.timer.C:
 					default:
 					}
 				}
-				s.timer.Reset(time.Duration(temp) * time.Millisecond)
-			case actionAdd:
-				a.val += atomic.LoadUint64(s.cycleTime)
-				fallthrough
+				s.timer.Reset(temp)
 			case actionSet:
-				atomic.StoreInt64(s.startTime, time.Now().UnixNano())
-				atomic.StoreUint64(s.cycleTime, a.val)
+				s.mtx.Lock()
+				s.startTime = time.Now().UnixNano()
+				s.cycleTime = a.val
+				s.mtx.Unlock()
 				if !s.timer.Stop() {
 					select {
 					case <-s.timer.C:
 					default:
 					}
 				}
-				s.timer.Reset(time.Duration(a.val) * time.Millisecond)
+				s.timer.Reset(time.Duration(a.val))
 			default:
 			}
 		}
 	}
 }
 
-func AddRandomness(value uint, randomness float32) uint {
+func AddRandomness(value time.Duration, randomness float32) time.Duration {
 	r := rand.Intn(int(float32(value) * randomness))
-	return value + uint(r)
+	return value + time.Duration(r)
 }

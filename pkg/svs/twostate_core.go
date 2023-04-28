@@ -17,7 +17,7 @@ type twoStateCore struct {
 	app         *eng.Engine
 	state       *CoreState
 	constants   *Constants
-	missingChan chan *[]MissingData
+	missingChan chan []MissingData
 	syncPrefix  enc.Name
 	sourceStr   string
 	sourceSeq   uint64
@@ -37,7 +37,7 @@ func newTwoStateCore(app *eng.Engine, config *CoreConfig, constants *Constants) 
 		app:         app,
 		state:       new(CoreState),
 		constants:   constants,
-		missingChan: make(chan *[]MissingData, constants.InitialMissingChannelSize),
+		missingChan: make(chan []MissingData, constants.InitialMissingChannelSize),
 		syncPrefix:  config.SyncPrefix,
 		sourceStr:   config.Source.String(),
 		vector:      NewStateVector(),
@@ -46,7 +46,7 @@ func newTwoStateCore(app *eng.Engine, config *CoreConfig, constants *Constants) 
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
-			Lifetime:    utl.IdPtr(time.Duration(constants.SyncInterestLifeTime) * time.Millisecond),
+			Lifetime:    utl.IdPtr(constants.SyncInterestLifeTime),
 		},
 	}
 	c.scheduler = NewScheduler(c.target, constants.Interval, constants.IntervalRandomness)
@@ -104,11 +104,11 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 	c.scheduler.Skip()
 }
 
-func (c *twoStateCore) GetSeqno() uint64 {
+func (c *twoStateCore) Seqno() uint64 {
 	return c.sourceSeq
 }
 
-func (c *twoStateCore) GetStateVector() StateVector {
+func (c *twoStateCore) StateVector() StateVector {
 	return c.vector
 }
 
@@ -133,7 +133,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	} else {
 		atomic.StoreInt32((*int32)(c.state), int32(Suppression))
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
-		if uint(c.scheduler.TimeLeft().Milliseconds()) > delay {
+		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
 		}
 	}
@@ -176,12 +176,12 @@ func (c *twoStateCore) sendInterest() {
 
 func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	var (
-		missing []MissingData = make([]MissingData, 0)
+		missing = make([]MissingData, 0)
 		temp    uint64
 		isNewer bool
 	)
 	c.vectorMtx.Lock()
-  for nid, seqno := range incomingVector.Entries() {
+	for nid, seqno := range incomingVector.Entries() {
 		temp = c.vector.Get(nid)
 		if temp < seqno {
 			missing = append(missing, NewMissingData(nid, temp+1, seqno))
@@ -195,7 +195,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	}
 	c.vectorMtx.Unlock()
 	if len(missing) != 0 {
-		c.missingChan <- &missing
+		c.missingChan <- missing
 	}
 	return isNewer
 }
@@ -203,13 +203,13 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
 	c.recordMtx.Lock()
 	defer c.recordMtx.Unlock()
-  for nid, seqno := range incomingVector.Entries() {
+	for nid, seqno := range incomingVector.Entries() {
 		if c.record.Get(nid) < seqno {
 			c.record.Set(nid, seqno)
 		}
 	}
 }
 
-func (c *twoStateCore) MissingChan() chan *[]MissingData {
+func (c *twoStateCore) Chan() chan []MissingData {
 	return c.missingChan
 }

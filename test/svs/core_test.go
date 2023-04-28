@@ -12,10 +12,10 @@ func TestCoreInitialState(t *testing.T) {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr("/nodename")
 	config := &svs.CoreConfig{
-		Source:         nid,
-		SyncPrefix:     syncPrefix,
+		Source:     nid,
+		SyncPrefix: syncPrefix,
 	}
 	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
-	assert.Equal(t, uint64(0), core.GetSeqno())
-	assert.Equal(t, svs.NewStateVector(), core.GetStateVector())
+	assert.Equal(t, uint64(0), core.Seqno())
+	assert.Equal(t, svs.NewStateVector(), core.StateVector())
 }

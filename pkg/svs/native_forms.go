@@ -15,7 +15,7 @@ type NativeSync interface {
 	NeedData(string, uint64)
 	PublishData([]byte)
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
-	GetCore() Core
+	Core() Core
 }
 
 type NativeConfig struct {
