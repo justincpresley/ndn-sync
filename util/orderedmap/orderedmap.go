@@ -1,15 +1,3 @@
-/*
- This module is a modified version of the original work.
- Original work can be found at:
-          github.com/elliotchance/orderedmap
-
- The license provided (copy_of_license.md) covers the files
- within this directory. In addition, the changes or modifications
- done are described in changes.md.
- I do not claim ownership or creation of this module. All
- credit should be given to the original author.
-*/
-
 package orderedmap
 
 type OrderedMap[K comparable, V any] struct {
@@ -28,17 +16,22 @@ func (om *OrderedMap[K, V]) Front() *Element[K, V] { return om.ll.Front() }
 func (om *OrderedMap[K, V]) Back() *Element[K, V]  { return om.ll.Back() }
 
 func (om *OrderedMap[K, V]) Copy() *OrderedMap[K, V] {
-	ret := New[K, V]()
-	for e := om.Front(); e != nil; e = e.Next() {
-		ret.Set(e.Key, e.Value, true)
+	var (
+		ret  = New[K, V]()
+		i, e *Element[K, V]
+	)
+	for i = om.Front(); i != nil; i = i.Next() {
+		e = &Element[K, V]{Key: i.Key, Value: i.Value}
+		ret.ll.PushBack(e)
+		om.kv[e.Key] = e
 	}
 	return ret
 }
 
 func (om *OrderedMap[K, V]) Get(key K) (val V, ok bool) {
-	v, ok := om.kv[key]
+	e, ok := om.kv[key]
 	if ok {
-		val = v.Value
+		val = e.Value
 	}
 	return
 }
@@ -52,27 +45,28 @@ func (om *OrderedMap[K, V]) GetElement(key K) *Element[K, V] {
 }
 
 func (om *OrderedMap[K, V]) Set(key K, value V, old bool) bool {
-	e, alreadyExist := om.kv[key]
-	if alreadyExist {
+	e, ok := om.kv[key]
+	if ok {
 		e.Value = value
 		if !old {
 			om.ll.MoveToFront(e)
 		}
 		return true
 	}
+	e = &Element[K, V]{Key: key, Value: value}
 	if old {
-		e = om.ll.PushBack(key, value)
+		om.ll.PushBack(e)
 	} else {
-		e = om.ll.PushFront(key, value)
+		om.ll.PushFront(e)
 	}
 	om.kv[key] = e
 	return false
 }
 
 func (om *OrderedMap[K, V]) Remove(key K) bool {
-	element, ok := om.kv[key]
+	e, ok := om.kv[key]
 	if ok {
-		om.ll.Remove(element)
+		om.ll.Remove(e)
 		delete(om.kv, key)
 	}
 	return ok

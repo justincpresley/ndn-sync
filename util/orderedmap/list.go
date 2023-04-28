@@ -1,15 +1,3 @@
-/*
- This module is a modified version of the original work.
- Original work can be found at:
-          github.com/elliotchance/orderedmap
-
- The license provided (copy_of_license.md) covers the files
- within this directory. In addition, the changes or modifications
- done are described in changes.md.
- I do not claim ownership or creation of this module. All
- credit should be given to the original author.
-*/
-
 package orderedmap
 
 type Element[K comparable, V any] struct {
@@ -43,30 +31,48 @@ func (l *list[K, V]) Remove(e *Element[K, V]) {
 	e.prev = nil
 }
 
-func (l *list[K, V]) PushFront(key K, value V) *Element[K, V] {
-	e := &Element[K, V]{Key: key, Value: value}
+func (l *list[K, V]) PushFront(e *Element[K, V]) {
 	if l.head == nil {
 		l.head = e
 		l.tail = e
-		return e
+		return
 	}
 	e.next = l.head
 	l.head.prev = e
 	l.head = e
-	return e
 }
 
-func (l *list[K, V]) PushBack(key K, value V) *Element[K, V] {
-	e := &Element[K, V]{Key: key, Value: value}
+func (l *list[K, V]) PushBack(e *Element[K, V]) {
 	if l.tail == nil {
 		l.head = e
 		l.tail = e
-		return e
+		return
 	}
 	e.prev = l.tail
 	l.tail.next = e
 	l.tail = e
-	return e
+}
+
+func (l *list[K, V]) PushAfter(e, i *Element[K, V]) {
+	e.prev = i
+	if i == l.tail {
+		l.tail = e
+	} else {
+		e.next = i.next
+		i.next.prev = e
+	}
+	i.next = e
+}
+
+func (l *list[K, V]) PushBefore(e, i *Element[K, V]) {
+	e.next = i
+	if i == l.head {
+		l.head = e
+	} else {
+		e.prev = i.prev
+		i.prev.next = e
+	}
+	i.prev = e
 }
 
 func (l *list[K, V]) MoveToFront(e *Element[K, V]) {
