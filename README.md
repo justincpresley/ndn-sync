@@ -56,7 +56,9 @@ describes many of the Syncs that are currently known and their unique difference
 
 ## Getting Involved
 
-The most effortless way you can contribute to ***ndn-sync*** is to simply have discussions surrounding ***ndn-sync***. [You can do so here!](https://github.com/justincpresley/ndn-sync/discussions)
+The most effortless way you can contribute to ***ndn-sync*** is to simply have discussions surrounding ***ndn-sync***.
+
+[You can do so here!](https://github.com/justincpresley/ndn-sync/discussions)
 
 In addition, ***ndn-sync*** has more practical ways to get involved: [Issues](https://github.com/justincpresley/ndn-sync/issues) and [Pull Requests](https://github.com/justincpresley/ndn-sync/pulls).
 
