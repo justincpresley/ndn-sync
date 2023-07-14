@@ -34,7 +34,6 @@ type sharedSync struct {
 	storage     Database
 	intCfg      *ndn.InterestConfig
 	datCfg      *ndn.DataConfig
-	dataComp    enc.Component
 	logger      *log.Entry
 	dataCall    func(source string, seqno uint64, data ndn.Data)
 	fetchQueue  chan *sharedFetchItem
@@ -46,9 +45,7 @@ type sharedSync struct {
 func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) *sharedSync {
 	var s *sharedSync
 	logger := log.WithField("module", "svs")
-	syncComp, _ := enc.ComponentFromStr("sync")
-	dataComp, _ := enc.ComponentFromStr("data")
-	syncPrefix := append(config.GroupPrefix, syncComp)
+	syncPrefix := append(config.GroupPrefix, constants.SyncComponent)
 
 	if config.DataCallback == nil {
 		logger.Error("Fetcher based on NativeConfig needs DataCallback.")
@@ -81,7 +78,6 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
 			Freshness:   utl.IdPtr(constants.DataPacketFreshness),
 		},
-		dataComp:   dataComp,
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		fetchQueue: make(chan *sharedFetchItem, constants.InitialFetchQueueLength),
@@ -107,7 +103,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 }
 
 func (s *sharedSync) Listen() {
-	dataPrefix := append(s.groupPrefix, s.dataComp)
+	dataPrefix := append(s.groupPrefix, s.constants.DataComponent)
 	err := s.app.AttachHandler(dataPrefix, s.onInterest)
 	if err != nil {
 		s.logger.Errorf("Unable to register handler: %+v", err)
@@ -131,7 +127,7 @@ func (s *sharedSync) Activate(immediateStart bool) {
 func (s *sharedSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
-		dataPrefix := append(s.groupPrefix, s.dataComp)
+		dataPrefix := append(s.groupPrefix, s.constants.DataComponent)
 		err := s.app.DetachHandler(dataPrefix)
 		if err != nil {
 			s.logger.Errorf("Detech handler error: %+v", err)
@@ -243,7 +239,7 @@ func (s *sharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 }
 
 func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
-	dataName := append(s.groupPrefix, s.dataComp)
+	dataName := append(s.groupPrefix, s.constants.DataComponent)
 	src, _ := enc.NameFromStr(source)
 	dataName = append(dataName, src...)
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))

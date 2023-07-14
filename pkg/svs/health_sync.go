@@ -27,8 +27,7 @@ type healthSync struct {
 func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) *healthSync {
 	var s *healthSync
 	logger := log.WithField("module", "svs")
-	syncComp, _ := enc.ComponentFromStr("sync")
-	syncPrefix := append(config.GroupPrefix, syncComp)
+	syncPrefix := append(config.GroupPrefix, constants.SyncComponent)
 
 	// TODO: switch to new core type (check then switch)
 	coreConfig := &TwoStateCoreConfig{
