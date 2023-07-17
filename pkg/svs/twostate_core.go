@@ -20,6 +20,7 @@ type twoStateCore struct {
 	missingChan chan []MissingData
 	syncPrefix  enc.Name
 	sourceStr   string
+	sourceName  enc.Name
 	sourceSeq   uint64
 	vector      StateVector
 	record      StateVector
@@ -41,6 +42,7 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		missingChan: make(chan []MissingData, constants.InitialMissingChannelSize),
 		syncPrefix:  config.SyncPrefix,
 		sourceStr:   config.Source.String(),
+		sourceName:  config.Source,
 		vector:      NewStateVector(),
 		record:      NewStateVector(),
 		logger:      log.WithField("module", "svs"),
@@ -101,7 +103,7 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 	}
 	c.sourceSeq = seqno
 	c.vectorMtx.Lock()
-	c.vector.Set(c.sourceStr, seqno, false)
+	c.vector.Set(c.sourceStr, c.sourceName, seqno, false)
 	c.vectorMtx.Unlock()
 	c.scheduler.Skip()
 }
@@ -184,11 +186,11 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	)
 	c.vectorMtx.Lock()
 	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.vector.Get(pair.Key)
+		temp = c.vector.Get(pair.Kstring)
 		if temp < pair.Value {
-			missing = append(missing, NewMissingData(pair.Key, temp+1, pair.Value))
-			c.vector.Set(pair.Key, pair.Value, false)
-		} else if pair.Key != c.sourceStr && temp > pair.Value {
+			missing = append(missing, NewMissingData(pair.Kstring, temp+1, pair.Value))
+			c.vector.Set(pair.Kstring, pair.Kname, pair.Value, false)
+		} else if pair.Kstring != c.sourceStr && temp > pair.Value {
 			isNewer = true
 		}
 	}
@@ -206,8 +208,8 @@ func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
 	c.recordMtx.Lock()
 	defer c.recordMtx.Unlock()
 	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		if c.record.Get(pair.Key) < pair.Value {
-			c.record.Set(pair.Key, pair.Value, false)
+		if c.record.Get(pair.Kstring) < pair.Value {
+			c.record.Set(pair.Kstring, pair.Kname, pair.Value, false)
 		}
 	}
 }

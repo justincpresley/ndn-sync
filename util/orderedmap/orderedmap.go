@@ -1,34 +1,40 @@
 package orderedmap
 
-type OrderedMap[K comparable, V any] struct {
-	kv map[K]*Element[K, V]
-	ll list[K, V]
+import (
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
+)
+
+type OrderedMap[V any] struct {
+	kv map[string]*Element[string, enc.Name, V]
+	ll list[string, enc.Name, V]
+	oo Ordering
 }
 
-func New[K comparable, V any]() *OrderedMap[K, V] {
-	return &OrderedMap[K, V]{
-		kv: make(map[K]*Element[K, V]),
+func New[V any](o Ordering) *OrderedMap[V] {
+	return &OrderedMap[V]{
+		kv: make(map[string]*Element[string, enc.Name, V]),
+		oo: o,
 	}
 }
 
-func (om *OrderedMap[K, V]) Len() int              { return len(om.kv) }
-func (om *OrderedMap[K, V]) Front() *Element[K, V] { return om.ll.Front() }
-func (om *OrderedMap[K, V]) Back() *Element[K, V]  { return om.ll.Back() }
+func (om *OrderedMap[V]) Len() int                     { return len(om.kv) }
+func (om *OrderedMap[V]) Front() *Element[string, enc.Name, V] { return om.ll.Front() }
+func (om *OrderedMap[V]) Back() *Element[string, enc.Name, V]  { return om.ll.Back() }
 
-func (om *OrderedMap[K, V]) Copy() *OrderedMap[K, V] {
+func (om *OrderedMap[V]) Copy() *OrderedMap[V] {
 	var (
-		ret  = New[K, V]()
-		i, e *Element[K, V]
+		ret  = New[V](om.oo)
+		i, e *Element[string, enc.Name, V]
 	)
 	for i = om.Front(); i != nil; i = i.Next() {
-		e = &Element[K, V]{Key: i.Key, Value: i.Value}
+		e = &Element[string, enc.Name, V]{Kstring: i.Kstring, Kname: i.Kname, Value: i.Value}
 		ret.ll.PushBack(e)
-		om.kv[e.Key] = e
+		om.kv[e.Kstring] = e
 	}
 	return ret
 }
 
-func (om *OrderedMap[K, V]) Get(key K) (val V, ok bool) {
+func (om *OrderedMap[V]) Get(key string) (val V, ok bool) {
 	e, ok := om.kv[key]
 	if ok {
 		val = e.Value
@@ -36,7 +42,7 @@ func (om *OrderedMap[K, V]) Get(key K) (val V, ok bool) {
 	return
 }
 
-func (om *OrderedMap[K, V]) GetElement(key K) *Element[K, V] {
+func (om *OrderedMap[V]) GetElement(key string) *Element[string, enc.Name, V] {
 	e, ok := om.kv[key]
 	if ok {
 		return e
@@ -44,8 +50,40 @@ func (om *OrderedMap[K, V]) GetElement(key K) *Element[K, V] {
 	return nil
 }
 
-func (om *OrderedMap[K, V]) Set(key K, value V, old bool) bool {
+func (om *OrderedMap[V]) Remove(key string) bool {
 	e, ok := om.kv[key]
+	if ok {
+		om.ll.Remove(e)
+		delete(om.kv, key)
+	}
+	return ok
+}
+
+func (om *OrderedMap[V]) Set(kstring string, kname enc.Name, value V, mv MetaV) bool {
+	switch om.oo {
+	case LatestEntriesFirst:
+		return om.setLatestEntriesFirst(kstring, kname, value, mv.Old)
+	default:
+		return om.setCanonical(kstring, kname, value)
+	}
+}
+
+func (om *OrderedMap[V]) setCanonical(kstring string, kname enc.Name, value V) bool {
+	e, ok := om.kv[kstring]
+	if ok {
+		e.Value = value
+		return true
+	}
+	e = &Element[string, enc.Name, V]{Kstring: kstring, Kname: kname, Value: value}
+	om.ll.Insert(e, func(e1, e2 *Element[string, enc.Name, V]) bool {
+		return e1.Kname.Compare(e2.Kname) == 1
+	})
+	om.kv[kstring] = e
+	return false
+}
+
+func (om *OrderedMap[V]) setLatestEntriesFirst(kstring string, kname enc.Name, value V, old bool) bool {
+	e, ok := om.kv[kstring]
 	if ok {
 		e.Value = value
 		if !old {
@@ -53,21 +91,12 @@ func (om *OrderedMap[K, V]) Set(key K, value V, old bool) bool {
 		}
 		return true
 	}
-	e = &Element[K, V]{Key: key, Value: value}
+	e = &Element[string, enc.Name, V]{Kstring: kstring, Kname: kname, Value: value}
 	if old {
 		om.ll.PushBack(e)
 	} else {
 		om.ll.PushFront(e)
 	}
-	om.kv[key] = e
+	om.kv[kstring] = e
 	return false
-}
-
-func (om *OrderedMap[K, V]) Remove(key K) bool {
-	e, ok := om.kv[key]
-	if ok {
-		om.ll.Remove(e)
-		delete(om.kv, key)
-	}
-	return ok
 }

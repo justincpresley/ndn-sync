@@ -10,22 +10,21 @@ import (
 )
 
 type StateVector interface {
-	Set(string, uint64, bool)
+	Set(string, enc.Name, uint64, bool)
 	Get(string) uint64
 	String() string
 	Len() int
 	Total() uint64
-	Entries() *om.OrderedMap[string, uint64]
+	Entries() *om.OrderedMap[uint64]
 	ToComponent(bool) enc.Component
 }
 
 type stateVector struct {
-	// WARNING: ideally enc.Name, unable due to not implementing comparable
-	entries *om.OrderedMap[string, uint64]
+	entries *om.OrderedMap[uint64]
 }
 
 func NewStateVector() StateVector {
-	return stateVector{entries: om.New[string, uint64]()}
+	return stateVector{entries: om.New[uint64](om.LatestEntriesFirst)}
 }
 
 func ParseStateVector(comp enc.Component, formal bool) (ret StateVector, err error) {
@@ -36,8 +35,8 @@ func ParseStateVector(comp enc.Component, formal bool) (ret StateVector, err err
 	}
 }
 
-func (sv stateVector) Set(source string, seqno uint64, old bool) {
-	sv.entries.Set(source, seqno, old)
+func (sv stateVector) Set(source string, sname enc.Name, seqno uint64, old bool) {
+	sv.entries.Set(source, sname, seqno, om.MetaV{Old: old})
 }
 
 func (sv stateVector) Get(source string) uint64 {
@@ -50,7 +49,7 @@ func (sv stateVector) Get(source string) uint64 {
 func (sv stateVector) String() string {
 	var b strings.Builder
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		b.WriteString(p.Key)
+		b.WriteString(p.Kstring)
 		b.WriteString(":")
 		b.WriteString(strconv.FormatUint(p.Value, 10))
 		b.WriteString(" ")
@@ -73,7 +72,7 @@ func (sv stateVector) Total() uint64 {
 	return total
 }
 
-func (sv stateVector) Entries() *om.OrderedMap[string, uint64] {
+func (sv stateVector) Entries() *om.OrderedMap[uint64] {
 	return sv.entries
 }
 
@@ -101,11 +100,9 @@ func (sv stateVector) formalEncodingLengths() (int, []int) {
 	var (
 		e, tl, nl, i int
 		ls           = make([]int, sv.entries.Len())
-		n            enc.Name
 	)
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		n, _ = enc.NameFromStr(p.Key)
-		nl = n.EncodingLength()
+		nl = p.Kname.EncodingLength()
 		// source
 		e = enc.TypeName.EncodingLength()
 		e += enc.TLNum(nl).EncodingLength()
@@ -127,16 +124,14 @@ func (sv stateVector) formalEncodingLengths() (int, []int) {
 func (sv stateVector) formalEncodeInto(buf []byte, ls []int) int {
 	var (
 		el, off, pos, i int
-		n               enc.Name
 	)
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		n, _ = enc.NameFromStr(p.Key)
 		el = ls[i]
 		off = TypeEntry.EncodingLength() + enc.TLNum(el).EncodingLength()
 		// source
 		off += enc.TypeName.EncodeInto(buf[pos+off:])
-		off += enc.TLNum(n.EncodingLength()).EncodeInto(buf[pos+off:])
-		off += n.EncodeInto(buf[pos+off:])
+		off += enc.TLNum(p.Kname.EncodingLength()).EncodeInto(buf[pos+off:])
+		off += p.Kname.EncodeInto(buf[pos+off:])
 		// seqno
 		off += TypeEntrySeqno.EncodeInto(buf[pos+off:])
 		off += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodeInto(buf[pos+off:])
@@ -153,11 +148,9 @@ func (sv stateVector) formalEncodeInto(buf []byte, ls []int) int {
 func (sv stateVector) informalEncodingLength() int {
 	var (
 		e, nl int
-		n     enc.Name
 	)
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		n, _ = enc.NameFromStr(p.Key)
-		nl = n.EncodingLength()
+		nl = p.Kname.EncodingLength()
 		// source
 		e += enc.TypeName.EncodingLength()
 		e += enc.TLNum(nl).EncodingLength()
@@ -171,16 +164,12 @@ func (sv stateVector) informalEncodingLength() int {
 }
 
 func (sv stateVector) informalEncodeInto(buf []byte) int {
-	var (
-		pos int
-		n   enc.Name
-	)
+	var pos int
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		n, _ = enc.NameFromStr(p.Key)
 		// source
 		pos += enc.TypeName.EncodeInto(buf[pos:])
-		pos += enc.TLNum(n.EncodingLength()).EncodeInto(buf[pos:])
-		pos += n.EncodeInto(buf[pos:])
+		pos += enc.TLNum(p.Kname.EncodingLength()).EncodeInto(buf[pos:])
+		pos += p.Kname.EncodeInto(buf[pos:])
 		// seqno
 		pos += TypeEntrySeqno.EncodeInto(buf[pos:])
 		pos += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodeInto(buf[pos:])
@@ -239,7 +228,7 @@ func parseFormalStateVector(comp enc.Component) (ret StateVector, err error) {
 		seqno, _ = enc.ParseNat(buf[pos : pos+int(length)])
 		pos += int(length)
 		// add the entry
-		ret.Set(source.String(), uint64(seqno), true)
+		ret.Set(source.String(), source, uint64(seqno), true)
 	}
 	return ret, nil
 }
@@ -286,7 +275,7 @@ func parseInformalStateVector(comp enc.Component) (ret StateVector, err error) {
 		seqno, _ = enc.ParseNat(buf[pos : pos+int(length)])
 		pos += int(length)
 		// add the entry
-		ret.Set(source.String(), uint64(seqno), true)
+		ret.Set(source.String(), source, uint64(seqno), true)
 	}
 	return ret, nil
 }
