@@ -44,7 +44,10 @@ type nativeSync struct {
 func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *nativeSync {
 	var s *nativeSync
 	logger := log.WithField("module", "svs")
-	syncPrefix := append(config.GroupPrefix, constants.SyncComponent)
+	syncPrefix := config.GroupPrefix
+	if config.NamingScheme != BareSourceOrientedNaming {
+		syncPrefix = append(syncPrefix, constants.SyncComponent)
+	}
 
 	coreConfig := &TwoStateCoreConfig{
 		Source:         config.Source,
@@ -98,7 +101,10 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 }
 
 func (s *nativeSync) Listen() {
-	dataPrefix := append(s.groupPrefix, s.constants.DataComponent)
+	dataPrefix := s.groupPrefix
+	if s.namingScheme != BareSourceOrientedNaming {
+		dataPrefix = append(dataPrefix, s.constants.DataComponent)
+	}
 	if s.namingScheme == GroupOrientedNaming {
 		dataPrefix = append(dataPrefix, s.source...)
 	} else {
@@ -127,7 +133,10 @@ func (s *nativeSync) Activate(immediateStart bool) {
 func (s *nativeSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
-		dataPrefix := append(s.groupPrefix, s.constants.DataComponent)
+		dataPrefix := s.groupPrefix
+		if s.namingScheme != BareSourceOrientedNaming {
+			dataPrefix = append(dataPrefix, s.constants.DataComponent)
+		}
 		if s.namingScheme == GroupOrientedNaming {
 			dataPrefix = append(dataPrefix, s.source...)
 		} else {
@@ -240,7 +249,10 @@ func (s *nativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 }
 
 func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
-	dataName := append(s.groupPrefix, s.constants.DataComponent)
+	dataName := s.groupPrefix
+	if s.namingScheme != BareSourceOrientedNaming {
+		dataName = append(dataName, s.constants.DataComponent)
+	}
 	src, _ := enc.NameFromStr(source)
 	if s.namingScheme == GroupOrientedNaming {
 		dataName = append(dataName, src...)

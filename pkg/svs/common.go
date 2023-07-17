@@ -13,8 +13,9 @@ const (
 type NamingScheme int
 
 const (
-	SourceOrientedNaming NamingScheme = 0
-	GroupOrientedNaming  NamingScheme = 1
+	SourceOrientedNaming     NamingScheme = 0
+	BareSourceOrientedNaming NamingScheme = 1
+	GroupOrientedNaming      NamingScheme = 2
 )
 
 type HandlingOption int
