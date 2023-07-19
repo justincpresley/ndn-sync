@@ -17,7 +17,7 @@ func New[V any](o Ordering) *OrderedMap[V] {
 	}
 }
 
-func (om *OrderedMap[V]) Len() int                     { return len(om.kv) }
+func (om *OrderedMap[V]) Len() int                             { return len(om.kv) }
 func (om *OrderedMap[V]) Front() *Element[string, enc.Name, V] { return om.ll.Front() }
 func (om *OrderedMap[V]) Back() *Element[string, enc.Name, V]  { return om.ll.Back() }
 

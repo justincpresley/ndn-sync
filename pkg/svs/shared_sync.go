@@ -29,8 +29,7 @@ type sharedSync struct {
 	core        Core
 	constants   *Constants
 	groupPrefix enc.Name
-	source      enc.Name
-	sourceStr   string
+	srcStr      string
 	storage     Database
 	intCfg      *ndn.InterestConfig
 	datCfg      *ndn.DataConfig
@@ -66,8 +65,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		core:        NewCore(app, coreConfig, constants),
 		constants:   constants,
 		groupPrefix: config.GroupPrefix,
-		source:      config.Source,
-		sourceStr:   config.Source.String(),
+		srcStr:      config.Source.String(),
 		storage:     storage,
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
@@ -160,7 +158,7 @@ func (s *sharedSync) NeedData(source string, seqno uint64, cache bool) {
 
 func (s *sharedSync) PublishData(content []byte) {
 	seqno := s.core.Seqno() + 1
-	name := s.getDataName(s.sourceStr, seqno)
+	name := s.getDataName(s.srcStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
 		s.datCfg,
@@ -240,8 +238,8 @@ func (s *sharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 
 func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
 	dataName := append(s.groupPrefix, s.constants.DataComponent)
-	src, _ := enc.NameFromStr(source)
-	dataName = append(dataName, src...)
+	srcName, _ := enc.NameFromStr(source)
+	dataName = append(dataName, srcName...)
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
 }

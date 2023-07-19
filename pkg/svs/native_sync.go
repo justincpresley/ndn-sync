@@ -28,8 +28,8 @@ type nativeSync struct {
 	constants    *Constants
 	namingScheme NamingScheme
 	groupPrefix  enc.Name
-	source       enc.Name
-	sourceStr    string
+	srcName      enc.Name
+	srcStr       string
 	storage      Database
 	intCfg       *ndn.InterestConfig
 	datCfg       *ndn.DataConfig
@@ -65,8 +65,8 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		constants:    constants,
 		namingScheme: config.NamingScheme,
 		groupPrefix:  config.GroupPrefix,
-		source:       config.Source,
-		sourceStr:    config.Source.String(),
+		srcName:      config.Source,
+		srcStr:       config.Source.String(),
 		storage:      storage,
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
@@ -106,9 +106,9 @@ func (s *nativeSync) Listen() {
 		dataPrefix = append(dataPrefix, s.constants.DataComponent)
 	}
 	if s.namingScheme == GroupOrientedNaming {
-		dataPrefix = append(dataPrefix, s.source...)
+		dataPrefix = append(dataPrefix, s.srcName...)
 	} else {
-		dataPrefix = append(s.source, dataPrefix...)
+		dataPrefix = append(s.srcName, dataPrefix...)
 	}
 	err := s.app.AttachHandler(dataPrefix, s.onInterest)
 	if err != nil {
@@ -138,9 +138,9 @@ func (s *nativeSync) Shutdown() {
 			dataPrefix = append(dataPrefix, s.constants.DataComponent)
 		}
 		if s.namingScheme == GroupOrientedNaming {
-			dataPrefix = append(dataPrefix, s.source...)
+			dataPrefix = append(dataPrefix, s.srcName...)
 		} else {
-			dataPrefix = append(s.source, dataPrefix...)
+			dataPrefix = append(s.srcName, dataPrefix...)
 		}
 		err := s.app.DetachHandler(dataPrefix)
 		if err != nil {
@@ -173,7 +173,7 @@ func (s *nativeSync) NeedData(source string, seqno uint64) {
 
 func (s *nativeSync) PublishData(content []byte) {
 	seqno := s.core.Seqno() + 1
-	name := s.getDataName(s.sourceStr, seqno)
+	name := s.getDataName(s.srcStr, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
 		s.datCfg,
@@ -253,11 +253,11 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 	if s.namingScheme != BareSourceOrientedNaming {
 		dataName = append(dataName, s.constants.DataComponent)
 	}
-	src, _ := enc.NameFromStr(source)
+	srcName, _ := enc.NameFromStr(source)
 	if s.namingScheme == GroupOrientedNaming {
-		dataName = append(dataName, src...)
+		dataName = append(dataName, srcName...)
 	} else {
-		dataName = append(src, dataName...)
+		dataName = append(srcName, dataName...)
 	}
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName

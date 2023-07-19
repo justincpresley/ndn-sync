@@ -18,8 +18,7 @@ type healthSync struct {
 	tracker     Tracker
 	constants   *Constants
 	groupPrefix enc.Name
-	source      enc.Name
-	sourceStr   string
+	srcStr      string
 	logger      *log.Entry
 	handleData  *healthHandlerData
 }
@@ -41,8 +40,7 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 		tracker:     NewTracker(config.Source.String(), constants),
 		constants:   constants,
 		groupPrefix: config.GroupPrefix,
-		source:      config.Source,
-		sourceStr:   config.Source.String(),
+		srcStr:      config.Source.String(),
 		logger:      logger,
 	}
 
@@ -86,7 +84,7 @@ func (s *healthSync) newHandling(data *healthHandlerData) {
 		for {
 			if s.tracker.UntilBeat() < s.constants.MonitorInterval {
 				s.core.SetSeqno(s.core.Seqno() + 1)
-				s.tracker.Reset(s.sourceStr)
+				s.tracker.Reset(s.srcStr)
 			}
 			s.tracker.Detect()
 			select {

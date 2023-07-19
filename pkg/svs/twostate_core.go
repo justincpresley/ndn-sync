@@ -19,9 +19,9 @@ type twoStateCore struct {
 	constants   *Constants
 	missingChan chan []MissingData
 	syncPrefix  enc.Name
-	sourceStr   string
-	sourceName  enc.Name
-	sourceSeq   uint64
+	srcStr      string
+	srcName     enc.Name
+	srcSeq      uint64
 	vector      StateVector
 	record      StateVector
 	scheduler   Scheduler
@@ -41,8 +41,8 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		constants:   constants,
 		missingChan: make(chan []MissingData, constants.InitialMissingChannelSize),
 		syncPrefix:  config.SyncPrefix,
-		sourceStr:   config.Source.String(),
-		sourceName:  config.Source,
+		srcStr:      config.Source.String(),
+		srcName:     config.Source,
 		vector:      NewStateVector(),
 		record:      NewStateVector(),
 		logger:      log.WithField("module", "svs"),
@@ -97,19 +97,19 @@ func (c *twoStateCore) Shutdown() {
 }
 
 func (c *twoStateCore) SetSeqno(seqno uint64) {
-	if seqno <= c.sourceSeq {
+	if seqno <= c.srcSeq {
 		c.logger.Warn("The Core was updated with a lower seqno.")
 		return
 	}
-	c.sourceSeq = seqno
+	c.srcSeq = seqno
 	c.vectorMtx.Lock()
-	c.vector.Set(c.sourceStr, c.sourceName, seqno, false)
+	c.vector.Set(c.srcStr, c.srcName, seqno, false)
 	c.vectorMtx.Unlock()
 	c.scheduler.Skip()
 }
 
 func (c *twoStateCore) Seqno() uint64 {
-	return c.sourceSeq
+	return c.srcSeq
 }
 
 func (c *twoStateCore) StateVector() StateVector {
@@ -190,7 +190,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 		if temp < pair.Value {
 			missing = append(missing, NewMissingData(pair.Kstring, temp+1, pair.Value))
 			c.vector.Set(pair.Kstring, pair.Kname, pair.Value, false)
-		} else if pair.Kstring != c.sourceStr && temp > pair.Value {
+		} else if pair.Kstring != c.srcStr && temp > pair.Value {
 			isNewer = true
 		}
 	}
