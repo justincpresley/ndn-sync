@@ -188,7 +188,7 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
 		temp = c.vector.Get(pair.Kstring)
 		if temp < pair.Value {
-			missing = append(missing, NewMissingData(pair.Kstring, temp+1, pair.Value))
+			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
 			c.vector.Set(pair.Kstring, pair.Kname, pair.Value, false)
 		} else if pair.Kstring != c.srcStr && temp > pair.Value {
 			isNewer = true

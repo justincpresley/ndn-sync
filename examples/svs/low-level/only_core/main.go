@@ -76,7 +76,7 @@ loopCount:
 		case missing := <-recv:
 			for _, m := range missing {
 				for m.LowSeqno() <= m.HighSeqno() {
-					fmt.Println(m.Source() + ": " + strconv.FormatUint(m.LowSeqno(), 10))
+					fmt.Println(m.Source().String() + ": " + strconv.FormatUint(m.LowSeqno(), 10))
 					m.Increment()
 				}
 			}

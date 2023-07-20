@@ -46,11 +46,11 @@ func main() {
 
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	sourceName, _ := enc.NameFromStr(*source)
-	callback := func(source string, seqno uint64, data ndn.Data) {
+	callback := func(source enc.Name, seqno uint64, data ndn.Data) {
 		inputMutex.Lock()
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
-			fmt.Println(source + ": " + string(data.Content().Join()))
+			fmt.Println(source.String() + ": " + string(data.Content().Join()))
 		} else {
 			fmt.Println("Unfetchable")
 		}

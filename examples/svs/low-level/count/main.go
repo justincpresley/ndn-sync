@@ -43,10 +43,10 @@ func main() {
 	}
 	defer app.Shutdown()
 
-	dataCall := func(source string, seqno uint64, data ndn.Data) {
+	dataCall := func(source enc.Name, seqno uint64, data ndn.Data) {
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
-			fmt.Println(source + ": " + string(data.Content().Join()))
+			fmt.Println(source.String() + ": " + string(data.Content().Join()))
 		} else {
 			fmt.Println("Unfetchable")
 		}

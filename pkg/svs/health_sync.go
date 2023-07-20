@@ -94,7 +94,7 @@ func (s *healthSync) newHandling(data *healthHandlerData) {
 					return
 				}
 				for _, m := range missing {
-					s.tracker.Reset(m.Source())
+					s.tracker.Reset(m.Source().String())
 				}
 			default:
 			}

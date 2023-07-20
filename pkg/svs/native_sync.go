@@ -13,7 +13,7 @@ import (
 )
 
 type nativeFetchItem struct {
-	source  string
+	source  enc.Name
 	seqno   uint64
 	retries uint
 }
@@ -29,12 +29,11 @@ type nativeSync struct {
 	namingScheme NamingScheme
 	groupPrefix  enc.Name
 	srcName      enc.Name
-	srcStr       string
 	storage      Database
 	intCfg       *ndn.InterestConfig
 	datCfg       *ndn.DataConfig
 	logger       *log.Entry
-	dataCall     func(string, uint64, ndn.Data)
+	dataCall     func(enc.Name, uint64, ndn.Data)
 	fetchQueue   chan *nativeFetchItem
 	handleData   *nativeHandlerData
 	numFetches   *int32
@@ -66,7 +65,6 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		namingScheme: config.NamingScheme,
 		groupPrefix:  config.GroupPrefix,
 		srcName:      config.Source,
-		srcStr:       config.Source.String(),
 		storage:      storage,
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
@@ -157,7 +155,7 @@ func (s *nativeSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *nativeSync) NeedData(source string, seqno uint64) {
+func (s *nativeSync) NeedData(source enc.Name, seqno uint64) {
 	i := &nativeFetchItem{
 		source:  source,
 		seqno:   seqno,
@@ -173,7 +171,7 @@ func (s *nativeSync) NeedData(source string, seqno uint64) {
 
 func (s *nativeSync) PublishData(content []byte) {
 	seqno := s.core.Seqno() + 1
-	name := s.getDataName(s.srcStr, seqno)
+	name := s.getDataName(s.srcName, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
 		s.datCfg,
@@ -248,16 +246,15 @@ func (s *nativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
+func (s *nativeSync) getDataName(source enc.Name, seqno uint64) enc.Name {
 	dataName := s.groupPrefix
 	if s.namingScheme != BareSourceOrientedNaming {
 		dataName = append(dataName, s.constants.DataComponent)
 	}
-	srcName, _ := enc.NameFromStr(source)
 	if s.namingScheme == GroupOrientedNaming {
-		dataName = append(dataName, srcName...)
+		dataName = append(dataName, source...)
 	} else {
-		dataName = append(srcName, dataName...)
+		dataName = append(source, dataName...)
 	}
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName

@@ -13,7 +13,7 @@ import (
 )
 
 type sharedFetchItem struct {
-	source  string
+	source  enc.Name
 	seqno   uint64
 	retries uint
 	cache   bool
@@ -29,12 +29,12 @@ type sharedSync struct {
 	core        Core
 	constants   *Constants
 	groupPrefix enc.Name
-	srcStr      string
+	srcName     enc.Name
 	storage     Database
 	intCfg      *ndn.InterestConfig
 	datCfg      *ndn.DataConfig
 	logger      *log.Entry
-	dataCall    func(source string, seqno uint64, data ndn.Data)
+	dataCall    func(source enc.Name, seqno uint64, data ndn.Data)
 	fetchQueue  chan *sharedFetchItem
 	handleData  *sharedHandlerData
 	numFetches  *int32
@@ -65,7 +65,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		core:        NewCore(app, coreConfig, constants),
 		constants:   constants,
 		groupPrefix: config.GroupPrefix,
-		srcStr:      config.Source.String(),
+		srcName:     config.Source,
 		storage:     storage,
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
@@ -141,7 +141,7 @@ func (s *sharedSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *sharedSync) NeedData(source string, seqno uint64, cache bool) {
+func (s *sharedSync) NeedData(source enc.Name, seqno uint64, cache bool) {
 	i := &sharedFetchItem{
 		source:  source,
 		seqno:   seqno,
@@ -158,7 +158,7 @@ func (s *sharedSync) NeedData(source string, seqno uint64, cache bool) {
 
 func (s *sharedSync) PublishData(content []byte) {
 	seqno := s.core.Seqno() + 1
-	name := s.getDataName(s.srcStr, seqno)
+	name := s.getDataName(s.srcName, seqno)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
 		s.datCfg,
@@ -236,10 +236,9 @@ func (s *sharedSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *sharedSync) getDataName(source string, seqno uint64) enc.Name {
+func (s *sharedSync) getDataName(source enc.Name, seqno uint64) enc.Name {
 	dataName := append(s.groupPrefix, s.constants.DataComponent)
-	srcName, _ := enc.NameFromStr(source)
-	dataName = append(dataName, srcName...)
+	dataName = append(dataName, source...)
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
 }
