@@ -53,6 +53,30 @@ func TestUpdatingDoesntChangePairsOrder(t *testing.T) {
 		[]any{"bar", 28, 102, "baz"})
 }
 
+func TestDifferentOrderings(t *testing.T) {
+	m := om.New[any](om.Canonical)
+	s := "oooo"
+	n, _ := enc.NameFromStr(s)
+	m.Set(s, n, "bar", om.MetaV{})
+	s = "ooooo"
+	n, _ = enc.NameFromStr(s)
+	m.Set(s, n, 28, om.MetaV{})
+	s = "ooo"
+	n, _ = enc.NameFromStr(s)
+	m.Set(s, n, 100, om.MetaV{})
+	s = "oo"
+	n, _ = enc.NameFromStr(s)
+	m.Set(s, n, "baz", om.MetaV{})
+	s = "ooooo"
+	n, _ = enc.NameFromStr(s)
+	present := m.Set(s, n, 102, om.MetaV{})
+	assert.True(t, present)
+
+	assertOrderedPairsEqual(t, m,
+		[]string{"oo", "ooo", "oooo", "ooooo"},
+		[]any{"baz", 100, "bar", 102})
+}
+
 func TestDeletingAndReinsertingChangesPairsOrder(t *testing.T) {
 	m := om.New[any](om.LatestEntriesFirst)
 	n, _ := enc.NameFromStr("foo")

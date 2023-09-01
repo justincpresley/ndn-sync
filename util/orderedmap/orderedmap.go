@@ -76,7 +76,7 @@ func (om *OrderedMap[V]) setCanonical(kstring string, kname enc.Name, value V) b
 	}
 	e = &Element[string, enc.Name, V]{Kstring: kstring, Kname: kname, Value: value}
 	om.ll.Insert(e, func(e1, e2 *Element[string, enc.Name, V]) bool {
-		return e1.Kname.Compare(e2.Kname) == 1
+		return e1.Kname.Compare(e2.Kname) != 1
 	})
 	om.kv[kstring] = e
 	return false
