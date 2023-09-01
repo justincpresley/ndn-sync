@@ -130,7 +130,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.11...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...HEAD
+[v0.0.0-alpha.12]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.11...v0.0.0-alpha.12
 [v0.0.0-alpha.11]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.10...v0.0.0-alpha.11
 [v0.0.0-alpha.10]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.9...v0.0.0-alpha.10
 [v0.0.0-alpha.9]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.8...v0.0.0-alpha.9
