@@ -37,5 +37,5 @@ The [Production branch](https://github.com/justincpresley/ndn-sync/tree/producti
 
 Differences:
 * New Sync types: HealthSync, SharedSync.
-* StateVectors are ordered via Latest Entries (descending in freshness).
+* StateVectors are ordered via Latest Entries First.
 * Optimized Informal StateVector Encoding

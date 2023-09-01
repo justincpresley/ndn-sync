@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [v0.0.0-alpha.12] - 2023-08-31
+## Added
+- SVS `Constants` now contain `enc.Component`s that are added in SVS's naming. This was not exposed previously.
+- `BareSourceOrientedNaming` which is a new `NamingScheme` that uses no additional `enc.Component`s during SVS's naming.
+- `OrderedMap`s now take an `Ordering`: `Canonical` or `LatestEntriesFirst`.
+- `OrderedMap` is now less generic and more tied to our use-case of NDN. An `Element` now stores the key in both `enc.Name` and `string` forms. This results in slightly more memory usage but increases performance by minimizing the amount of 'name to string' and 'string to name' conversions throughout SVS.
+
+## Changed
+- SVS API is now `enc.Name`-based instead of being `string`-based.
+- `OrderedMap` API to reflect listed changes.
+- Updated dependencies.
+
 ## [v0.0.0-alpha.11] - 2023-02-03
 ## Added
 - A new Optimized `StateVector` Encoding! Reduces 2+ bytes per entry. Set `FormalEncoding` to `false` to activate it.
