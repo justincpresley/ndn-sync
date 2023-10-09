@@ -31,6 +31,7 @@ type CoreState int32
 const (
 	Steady      CoreState = 0
 	Suppression CoreState = 1
+	Shaking     CoreState = 2
 )
 
 type Status int

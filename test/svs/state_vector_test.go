@@ -47,8 +47,8 @@ func TestStateVectorFormalEncodeDecode(t *testing.T) {
 	sv.Set("/one", n, 1, true)
 	n, _ = enc.NameFromStr("/two")
 	sv.Set("/two", n, 2, true)
-	comp := sv.ToComponent(true)
-	nsv, _ := svs.ParseStateVector(comp, true)
+	wire := sv.Encode(true)
+	nsv, _ := svs.ParseStateVector(enc.NewWireReader(wire), true)
 	assert.Equal(t, uint64(1), nsv.Get("/one"))
 	assert.Equal(t, uint64(2), nsv.Get("/two"))
 	assert.Equal(t, uint64(3), nsv.Total())
@@ -62,8 +62,8 @@ func TestStateVectorInformalEncodeDecode(t *testing.T) {
 	sv.Set("/one", n, 1, true)
 	n, _ = enc.NameFromStr("/two")
 	sv.Set("/two", n, 2, true)
-	comp := sv.ToComponent(false)
-	nsv, _ := svs.ParseStateVector(comp, false)
+	wire := sv.Encode(false)
+	nsv, _ := svs.ParseStateVector(enc.NewWireReader(wire), false)
 	assert.Equal(t, uint64(1), nsv.Get("/one"))
 	assert.Equal(t, uint64(2), nsv.Get("/two"))
 	assert.Equal(t, uint64(3), nsv.Total())
@@ -72,8 +72,8 @@ func TestStateVectorInformalEncodeDecode(t *testing.T) {
 }
 
 func TestStateVectorFormalDecodeStatic(t *testing.T) {
-	comp, _ := enc.ComponentFromBytes([]byte{201, 24, 202, 10, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 202, 10, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2})
-	sv, _ := svs.ParseStateVector(comp, true)
+	wire := enc.Wire{[]byte{201, 24, 202, 10, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 202, 10, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2}}
+	sv, _ := svs.ParseStateVector(enc.NewWireReader(wire), true)
 	assert.Equal(t, uint64(1), sv.Get("/one"))
 	assert.Equal(t, uint64(2), sv.Get("/two"))
 	assert.Equal(t, uint64(3), sv.Total())
@@ -81,8 +81,8 @@ func TestStateVectorFormalDecodeStatic(t *testing.T) {
 }
 
 func TestStateVectorInformalDecodeStatic(t *testing.T) {
-	comp, _ := enc.ComponentFromBytes([]byte{201, 20, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2})
-	sv, _ := svs.ParseStateVector(comp, false)
+	wire := enc.Wire{[]byte{201, 20, 7, 5, 8, 3, 111, 110, 101, 204, 1, 1, 7, 5, 8, 3, 116, 119, 111, 204, 1, 2}}
+	sv, _ := svs.ParseStateVector(enc.NewWireReader(wire), false)
 	assert.Equal(t, uint64(1), sv.Get("/one"))
 	assert.Equal(t, uint64(2), sv.Get("/two"))
 	assert.Equal(t, uint64(3), sv.Total())

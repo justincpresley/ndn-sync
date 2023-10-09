@@ -1,7 +1,6 @@
 package svs
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 
@@ -16,7 +15,7 @@ type StateVector interface {
 	Len() int
 	Total() uint64
 	Entries() *om.OrderedMap[uint64]
-	ToComponent(bool) enc.Component
+	Encode(bool) enc.Wire
 }
 
 type stateVector struct {
@@ -27,11 +26,11 @@ func NewStateVector() StateVector {
 	return stateVector{entries: om.New[uint64](om.LatestEntriesFirst)}
 }
 
-func ParseStateVector(comp enc.Component, formal bool) (ret StateVector, err error) {
+func ParseStateVector(reader enc.ParseReader, formal bool) (StateVector, error) {
 	if formal {
-		return parseFormalStateVector(comp)
+		return parseFormalStateVector(reader)
 	} else {
-		return parseInformalStateVector(comp)
+		return parseInformalStateVector(reader)
 	}
 }
 
@@ -76,23 +75,37 @@ func (sv stateVector) Entries() *om.OrderedMap[uint64] {
 	return sv.entries
 }
 
-func (sv stateVector) ToComponent(formal bool) enc.Component {
-	return enc.Component{
-		Typ: TypeVector,
-		Val: sv.encodeVector(formal),
-	}
-}
-
-func (sv stateVector) encodeVector(formal bool) []byte {
+func (sv stateVector) Encode(formal bool) enc.Wire {
 	if formal {
 		tl, ls := sv.formalEncodingLengths()
-		buf := make([]byte, tl)
-		sv.formalEncodeInto(buf, ls)
-		return buf
+		// length
+		e := TypeVector.EncodingLength()
+		e += enc.TLNum(tl).EncodingLength()
+		e += tl
+		// space
+		wire := make(enc.Wire, 1)
+		wire[0] = make([]byte, e)
+		buf := wire[0]
+		// encode
+		off := TypeVector.EncodeInto(buf)
+		off += enc.TLNum(tl).EncodeInto(buf[off:])
+		sv.formalEncodeInto(buf[off:], ls)
+		return wire
 	} else {
-		buf := make([]byte, sv.informalEncodingLength())
-		sv.informalEncodeInto(buf)
-		return buf
+		tl := sv.informalEncodingLength()
+		// length
+		e := TypeVector.EncodingLength()
+		e += enc.TLNum(tl).EncodingLength()
+		e += tl
+		// space
+		wire := make(enc.Wire, 1)
+		wire[0] = make([]byte, e)
+		buf := wire[0]
+		// encode
+		off := TypeVector.EncodeInto(buf)
+		off += enc.TLNum(tl).EncodeInto(buf[off:])
+		sv.informalEncodeInto(buf[off:])
+		return wire
 	}
 }
 
@@ -178,103 +191,153 @@ func (sv stateVector) informalEncodeInto(buf []byte) int {
 	return pos
 }
 
-func parseFormalStateVector(comp enc.Component) (ret StateVector, err error) {
-	defer func() {
-		if recover() != nil {
-			ret = NewStateVector()
-			err = errors.New("encoding.ParseStatevector: buffer length invalid")
-		}
-	}()
-	var (
-		source      enc.Name
-		seqno       enc.Nat
-		length, typ enc.TLNum
-		buf         = comp.Val
-		pos, temp   int
-	)
-	// verify type
-	if comp.Typ != TypeVector {
-		return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
+	if reader == nil {
+		return NewStateVector(), enc.ErrBufferOverflow
 	}
-	// decode components
-	ret = NewStateVector()
-	for pos < len(buf) {
+	var (
+		source enc.Name
+		seqno  enc.Nat
+		l, t   enc.TLNum
+		b      enc.Buffer
+		end    int
+		err    error
+		ret    StateVector = NewStateVector()
+	)
+	// vector
+	t, err = enc.ReadTLNum(reader)
+	if err != nil {
+		return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+	}
+	if t != TypeVector {
+		return ret, enc.ErrUnrecognizedField{TypeNum: t}
+	}
+	l, err = enc.ReadTLNum(reader)
+	if err != nil {
+		return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+	}
+	if reader.Length()-reader.Pos() < int(l) {
+		return ret, enc.ErrFailToParse{TypeNum: t}
+	}
+	// entries
+	end = int(l)
+	for reader.Pos() < end {
 		// entry
-		typ, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		if typ != TypeEntry {
-			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		t, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		_, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
+		if t != TypeEntry {
+			return ret, enc.ErrUnrecognizedField{TypeNum: t}
+		}
+		_, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
 		// source
-		typ, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		if typ != enc.TypeName {
-			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		t, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		length, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		source, _ = enc.ReadName(enc.NewBufferReader(buf[pos : pos+int(length)]))
-		pos += int(length)
+		if t != enc.TypeName {
+			return ret, enc.ErrUnrecognizedField{TypeNum: t}
+		}
+		l, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
+		source, err = enc.ReadName(reader.Delegate(int(l)))
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
 		// seqno
-		typ, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		if typ != TypeEntrySeqno {
-			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		t, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		length, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		seqno, _ = enc.ParseNat(buf[pos : pos+int(length)])
-		pos += int(length)
-		// add the entry
+		if t != TypeEntrySeqno {
+			return ret, enc.ErrUnrecognizedField{TypeNum: t}
+		}
+		l, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
+		b, err = reader.ReadBuf(int(l))
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
+		seqno, _ = enc.ParseNat(b)
+		// add
 		ret.Set(source.String(), source, uint64(seqno), true)
 	}
 	return ret, nil
 }
 
-func parseInformalStateVector(comp enc.Component) (ret StateVector, err error) {
-	defer func() {
-		if recover() != nil {
-			ret = NewStateVector()
-			err = errors.New("encoding.ParseStatevector: buffer length invalid")
-		}
-	}()
-	var (
-		source      enc.Name
-		seqno       enc.Nat
-		length, typ enc.TLNum
-		buf         = comp.Val
-		pos, temp   int
-	)
-	// verify type
-	if comp.Typ != TypeVector {
-		return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
+	if reader == nil {
+		return NewStateVector(), enc.ErrBufferOverflow
 	}
-	// decode components
-	ret = NewStateVector()
-	for pos < len(buf) {
+	var (
+		source enc.Name
+		seqno  enc.Nat
+		l, t   enc.TLNum
+		b      enc.Buffer
+		end    int
+		err    error
+		ret    StateVector = NewStateVector()
+	)
+	// vector
+	t, err = enc.ReadTLNum(reader)
+	if err != nil {
+		return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+	}
+	if t != TypeVector {
+		return ret, enc.ErrUnrecognizedField{TypeNum: t}
+	}
+	l, err = enc.ReadTLNum(reader)
+	if err != nil {
+		return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+	}
+	if reader.Length()-reader.Pos() < int(l) {
+		return ret, enc.ErrFailToParse{TypeNum: t}
+	}
+	// entries
+	end = int(l)
+	for reader.Pos() < end {
 		// source
-		typ, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		if typ != enc.TypeName {
-			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		t, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		length, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		source, _ = enc.ReadName(enc.NewBufferReader(buf[pos : pos+int(length)]))
-		pos += int(length)
+		if t != enc.TypeName {
+			return ret, enc.ErrUnrecognizedField{TypeNum: t}
+		}
+		l, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
+		source, err = enc.ReadName(reader.Delegate(int(l)))
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
 		// seqno
-		typ, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		if typ != TypeEntrySeqno {
-			return NewStateVector(), errors.New("encoding.ParseStatevector: incorrect tlv type")
+		t, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		length, temp = enc.ParseTLNum(buf[pos:])
-		pos += temp
-		seqno, _ = enc.ParseNat(buf[pos : pos+int(length)])
-		pos += int(length)
-		// add the entry
+		if t != TypeEntrySeqno {
+			return ret, enc.ErrUnrecognizedField{TypeNum: t}
+		}
+		l, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
+		b, err = reader.ReadBuf(int(l))
+		if err != nil {
+			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
+		}
+		seqno, _ = enc.ParseNat(b)
+		// add
 		ret.Set(source.String(), source, uint64(seqno), true)
 	}
 	return ret, nil
