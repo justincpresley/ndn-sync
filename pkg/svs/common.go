@@ -26,12 +26,10 @@ const (
 	EqualTrafficHandling  HandlingOption = 2
 )
 
-type CoreState int32
-
 const (
-	Steady      CoreState = 0
-	Suppression CoreState = 1
-	Shaking     CoreState = 2
+	steadyState int32 = iota
+	suppressionState
+	shakingState
 )
 
 type Status int

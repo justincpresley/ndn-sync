@@ -15,7 +15,7 @@ import (
 
 type twoStateCore struct {
 	app         *eng.Engine
-	state       *CoreState
+	state       *int32
 	constants   *Constants
 	missingChan chan []MissingData
 	syncPrefix  enc.Name
@@ -37,7 +37,7 @@ type twoStateCore struct {
 func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
 		app:         app,
-		state:       new(CoreState),
+		state:       new(int32),
 		constants:   constants,
 		missingChan: make(chan []MissingData, constants.InitialMissingChannelSize),
 		syncPrefix:  config.SyncPrefix,
@@ -128,14 +128,14 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		return
 	}
 	localNewer := c.mergeStateVector(incomingVector)
-	if CoreState(atomic.LoadInt32((*int32)(c.state))) == Suppression {
+	if atomic.LoadInt32(c.state) == suppressionState {
 		c.recordStateVector(incomingVector)
 		return
 	}
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
-		atomic.StoreInt32((*int32)(c.state), int32(Suppression))
+		atomic.StoreInt32(c.state, suppressionState)
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
 		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
@@ -147,10 +147,10 @@ func (c *twoStateCore) target() {
 	c.recordMtx.Lock()
 	defer c.recordMtx.Unlock()
 	localNewer := c.mergeStateVector(c.record)
-	if CoreState(atomic.LoadInt32((*int32)(c.state))) == Steady || localNewer {
+	if atomic.LoadInt32(c.state) == steadyState || localNewer {
 		c.sendInterest()
 	}
-	atomic.StoreInt32((*int32)(c.state), int32(Steady))
+	atomic.StoreInt32(c.state, steadyState)
 	c.record = NewStateVector()
 }
 
