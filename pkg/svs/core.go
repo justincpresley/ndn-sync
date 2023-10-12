@@ -16,7 +16,7 @@ type Core interface {
 	Seqno() uint64
 	StateVector() StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
-	Chan() chan []MissingData
+	Subscribe() chan SyncUpdate
 }
 
 type CoreConfig interface{ *TwoStateCoreConfig }

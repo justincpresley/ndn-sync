@@ -22,6 +22,7 @@
 Dataset Representation: VectorClock
 Communication Model:    Push Notification
 Dataset Range:          Full-data
+Dataset Roles:          No Separation or Definition
 Multicast Usage:        Yes
 Long-lived Interests:   No
 Data Naming:            Sequential

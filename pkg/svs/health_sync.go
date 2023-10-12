@@ -15,6 +15,7 @@ type healthHandlerData struct {
 type healthSync struct {
 	app         *eng.Engine
 	core        Core
+	missChan    chan SyncUpdate
 	tracker     Tracker
 	constants   *Constants
 	groupPrefix enc.Name
@@ -43,6 +44,7 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 		srcStr:      config.Source.String(),
 		logger:      logger,
 	}
+	s.missChan = s.core.Subscribe()
 
 	hData := &healthHandlerData{
 		done: make(chan struct{}),
@@ -80,7 +82,6 @@ func (s *healthSync) Core() Core {
 
 func (s *healthSync) newHandling(data *healthHandlerData) {
 	go func() {
-		missingChan := s.Core().Chan()
 		for {
 			if s.tracker.UntilBeat() < s.constants.MonitorInterval {
 				s.core.SetSeqno(s.core.Seqno() + 1)
@@ -88,7 +89,7 @@ func (s *healthSync) newHandling(data *healthHandlerData) {
 			}
 			s.tracker.Detect()
 			select {
-			case missing, ok := <-missingChan:
+			case missing, ok := <-s.missChan:
 				if !ok {
 					data.done <- struct{}{}
 					return

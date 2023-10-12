@@ -26,6 +26,7 @@ type nativeSync struct {
 	app          *eng.Engine
 	core         Core
 	constants    *Constants
+	missChan     chan SyncUpdate
 	namingScheme NamingScheme
 	groupPrefix  enc.Name
 	srcName      enc.Name
@@ -80,6 +81,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		fetchQueue: make(chan *nativeFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
+	s.missChan = s.core.Subscribe()
 
 	hData := &nativeHandlerData{
 		done: make(chan struct{}),
@@ -262,10 +264,9 @@ func (s *nativeSync) getDataName(source enc.Name, seqno uint64) enc.Name {
 
 func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.Core().Chan()
 		for {
 			select {
-			case missing, ok := <-missingChan:
+			case missing, ok := <-s.missChan:
 				if !ok {
 					data.done <- struct{}{}
 					return
@@ -283,11 +284,10 @@ func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 
 func (s *nativeSync) newEqualTrafficHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.Core().Chan()
 		var allFetched bool
 		for {
 			select {
-			case missing, ok := <-missingChan:
+			case missing, ok := <-s.missChan:
 				if !ok {
 					data.done <- struct{}{}
 					return

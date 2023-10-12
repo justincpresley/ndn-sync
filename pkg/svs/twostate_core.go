@@ -17,7 +17,7 @@ type twoStateCore struct {
 	app         *eng.Engine
 	state       *int32
 	constants   *Constants
-	missingChan chan []MissingData
+	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
 	srcStr      string
 	srcName     enc.Name
@@ -36,16 +36,16 @@ type twoStateCore struct {
 
 func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
-		app:         app,
-		state:       new(int32),
-		constants:   constants,
-		missingChan: make(chan []MissingData, constants.InitialMissingChannelSize),
-		syncPrefix:  config.SyncPrefix,
-		srcStr:      config.Source.String(),
-		srcName:     config.Source,
-		vector:      NewStateVector(),
-		record:      NewStateVector(),
-		logger:      log.WithField("module", "svs"),
+		app:        app,
+		state:      new(int32),
+		constants:  constants,
+		subs:       make([]chan SyncUpdate, 0),
+		syncPrefix: config.SyncPrefix,
+		srcStr:     config.Source.String(),
+		srcName:    config.Source,
+		vector:     NewStateVector(),
+		record:     NewStateVector(),
+		logger:     log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -92,7 +92,9 @@ func (c *twoStateCore) Shutdown() {
 			c.logger.Errorf("Unregister route error: %+v", err)
 		}
 	}
-	close(c.missingChan)
+	for _, sub := range c.subs {
+		close(sub)
+	}
 	c.logger.Info("Core Shutdown.")
 }
 
@@ -180,7 +182,7 @@ func (c *twoStateCore) sendInterest() {
 
 func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	var (
-		missing = make([]MissingData, 0)
+		missing = make(SyncUpdate, 0)
 		temp    uint64
 		isNewer bool
 	)
@@ -199,7 +201,9 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	}
 	c.vectorMtx.Unlock()
 	if len(missing) != 0 {
-		c.missingChan <- missing
+		for _, sub := range c.subs {
+			sub <- missing
+		}
 	}
 	return isNewer
 }
@@ -214,6 +218,8 @@ func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
 	}
 }
 
-func (c *twoStateCore) Chan() chan []MissingData {
-	return c.missingChan
+func (c *twoStateCore) Subscribe() chan SyncUpdate {
+	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
+	c.subs = append(c.subs, ch)
+	return ch
 }

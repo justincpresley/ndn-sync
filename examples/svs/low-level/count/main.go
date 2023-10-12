@@ -74,7 +74,7 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
-	recv := sync.Core().Chan()
+	recv := sync.Core().Subscribe()
 	fmt.Println("Starting Count ...")
 
 loopCount:

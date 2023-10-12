@@ -61,7 +61,7 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
-	recv := core.Chan()
+	recv := core.Subscribe()
 	fmt.Println("Reporting all updates only while updating Core.")
 
 loopCount:

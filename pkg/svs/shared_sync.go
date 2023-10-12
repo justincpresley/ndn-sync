@@ -28,6 +28,7 @@ type sharedSync struct {
 	app         *eng.Engine
 	core        Core
 	constants   *Constants
+	missChan    chan SyncUpdate
 	groupPrefix enc.Name
 	srcName     enc.Name
 	storage     Database
@@ -81,6 +82,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		fetchQueue: make(chan *sharedFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
+	s.missChan = s.core.Subscribe()
 
 	hData := &sharedHandlerData{
 		done:  make(chan struct{}),
@@ -245,10 +247,9 @@ func (s *sharedSync) getDataName(source enc.Name, seqno uint64) enc.Name {
 
 func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 	go func() {
-		missingChan := s.Core().Chan()
 		for {
 			select {
-			case missing, ok := <-missingChan:
+			case missing, ok := <-s.missChan:
 				if !ok {
 					data.done <- struct{}{}
 					return
@@ -266,11 +267,10 @@ func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 
 func (s *sharedSync) newEqualTrafficHandling(data *sharedHandlerData) {
 	go func() {
-		missingChan := s.Core().Chan()
 		var allFetched bool
 		for {
 			select {
-			case missing, ok := <-missingChan:
+			case missing, ok := <-s.missChan:
 				if !ok {
 					data.done <- struct{}{}
 					return

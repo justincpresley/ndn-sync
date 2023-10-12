@@ -26,16 +26,18 @@ const (
 	EqualTrafficHandling  HandlingOption = 2
 )
 
-const (
-	steadyState int32 = iota
-	suppressionState
-	shakingState
-)
-
 type Status int
 
 const (
 	Unseen  Status = 0
 	Expired Status = 1
 	Renewed Status = 2
+)
+
+type SyncUpdate []MissingData
+
+const (
+	steadyState int32 = iota
+	suppressionState
+	shakingState
 )
