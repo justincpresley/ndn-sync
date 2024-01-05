@@ -22,12 +22,12 @@ type twoStateCore struct {
 	srcStr      string
 	srcName     enc.Name
 	srcSeq      uint64
-	vector      StateVector
+	local       StateVector
 	record      StateVector
 	scheduler   Scheduler
 	logger      *log.Entry
 	intCfg      *ndn.InterestConfig
-	vectorMtx   sync.Mutex
+	localMtx    sync.Mutex
 	recordMtx   sync.Mutex
 	formal      bool
 	isListening bool
@@ -43,7 +43,7 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		syncPrefix: config.SyncPrefix,
 		srcStr:     config.Source.String(),
 		srcName:    config.Source,
-		vector:     NewStateVector(),
+		local:      NewStateVector(),
 		record:     NewStateVector(),
 		logger:     log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
@@ -53,7 +53,7 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		},
 		formal: config.FormalEncoding,
 	}
-	c.scheduler = NewScheduler(c.target, constants.Interval, constants.IntervalRandomness)
+	c.scheduler = NewScheduler(c.onTimer, constants.Interval, constants.IntervalRandomness)
 	return c
 }
 
@@ -104,9 +104,9 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 		return
 	}
 	c.srcSeq = seqno
-	c.vectorMtx.Lock()
-	c.vector.Set(c.srcStr, c.srcName, seqno, false)
-	c.vectorMtx.Unlock()
+	c.localMtx.Lock()
+	c.local.Set(c.srcStr, c.srcName, seqno, false)
+	c.localMtx.Unlock()
 	c.scheduler.Skip()
 }
 
@@ -115,7 +115,7 @@ func (c *twoStateCore) Seqno() uint64 {
 }
 
 func (c *twoStateCore) StateVector() StateVector {
-	return c.vector
+	return c.local
 }
 
 func (c *twoStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
@@ -124,14 +124,14 @@ func (c *twoStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire,
 
 func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	// TODO: VERIFY THE INTEREST
-	incomingVector, err := ParseStateVector(enc.NewWireReader(interest.AppParam()), c.formal)
+	remote, err := ParseStateVector(enc.NewWireReader(interest.AppParam()), c.formal)
 	if err != nil {
 		c.logger.Warnf("Received unparsable statevector: %+v", err)
 		return
 	}
-	localNewer := c.mergeStateVector(incomingVector)
+	localNewer := c.mergeStateVector(remote)
 	if atomic.LoadInt32(c.state) == suppressionState {
-		c.recordStateVector(incomingVector)
+		c.recordStateVector(remote)
 		return
 	}
 	if !localNewer {
@@ -145,7 +145,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	}
 }
 
-func (c *twoStateCore) target() {
+func (c *twoStateCore) onTimer() {
 	c.recordMtx.Lock()
 	defer c.recordMtx.Unlock()
 	localNewer := c.mergeStateVector(c.record)
@@ -160,9 +160,9 @@ func (c *twoStateCore) sendInterest() {
 	// make the interest
 	// TODO: SIGN THE INTEREST WITH AUTHENTICATABLE KEY
 	// WARNING: SHA SIGNER PROVIDES NOTHING (signature only includes the appParams) & IS ONLY PLACEHOLDER
-	c.vectorMtx.Lock()
-	appP := c.vector.Encode(c.formal)
-	c.vectorMtx.Unlock()
+	c.localMtx.Lock()
+	appP := c.local.Encode(c.formal)
+	c.localMtx.Unlock()
 	wire, _, finalName, err := c.app.Spec().MakeInterest(
 		c.syncPrefix, c.intCfg, appP, sec.NewSha256IntSigner(c.app.Timer()),
 	)
@@ -180,26 +180,26 @@ func (c *twoStateCore) sendInterest() {
 	}
 }
 
-func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
+func (c *twoStateCore) mergeStateVector(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		temp    uint64
 		isNewer bool
 	)
-	c.vectorMtx.Lock()
-	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.vector.Get(pair.Kstring)
+	c.localMtx.Lock()
+	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
+		temp = c.local.Get(pair.Kstring)
 		if temp < pair.Value {
 			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
-			c.vector.Set(pair.Kstring, pair.Kname, pair.Value, false)
+			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
 		} else if pair.Kstring != c.srcStr && temp > pair.Value {
 			isNewer = true
 		}
 	}
-	if incomingVector.Len() < c.vector.Len() {
+	if vector.Len() < c.local.Len() {
 		isNewer = true
 	}
-	c.vectorMtx.Unlock()
+	c.localMtx.Unlock()
 	if len(missing) != 0 {
 		for _, sub := range c.subs {
 			sub <- missing
@@ -208,10 +208,10 @@ func (c *twoStateCore) mergeStateVector(incomingVector StateVector) bool {
 	return isNewer
 }
 
-func (c *twoStateCore) recordStateVector(incomingVector StateVector) {
+func (c *twoStateCore) recordStateVector(vector StateVector) {
 	c.recordMtx.Lock()
 	defer c.recordMtx.Unlock()
-	for pair := incomingVector.Entries().Back(); pair != nil; pair = pair.Prev() {
+	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
 		if c.record.Get(pair.Kstring) < pair.Value {
 			c.record.Set(pair.Kstring, pair.Kname, pair.Value, false)
 		}
