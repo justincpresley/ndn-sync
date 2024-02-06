@@ -19,7 +19,11 @@ type Core interface {
 	Subscribe() chan SyncUpdate
 }
 
-type CoreConfig interface{ *TwoStateCoreConfig }
+type OneStateCoreConfig struct {
+	Source         enc.Name
+	SyncPrefix     enc.Name
+	FormalEncoding bool
+}
 
 type TwoStateCoreConfig struct {
 	Source         enc.Name
@@ -27,6 +31,14 @@ type TwoStateCoreConfig struct {
 	FormalEncoding bool
 }
 
-func NewCore[T CoreConfig](app *eng.Engine, config T, constants *Constants) Core {
-	return newTwoStateCore(app, config, constants)
+// TODO: change after threestatecore is added
+func NewCore(app *eng.Engine, config interface{}, constants *Constants) Core {
+	switch config.(type) {
+	case OneStateCoreConfig:
+		return newOneStateCore(app, config.(*OneStateCoreConfig), constants)
+	case TwoStateCoreConfig:
+		return newTwoStateCore(app, config.(*TwoStateCoreConfig), constants)
+	default:
+		return newNullCore()
+	}
 }

@@ -2,7 +2,6 @@ package svs
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	log "github.com/apex/log"
@@ -13,9 +12,8 @@ import (
 	utl "github.com/zjkmxy/go-ndn/pkg/utils"
 )
 
-type twoStateCore struct {
+type oneStateCore struct {
 	app         *eng.Engine
-	state       *int32
 	constants   *Constants
 	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
@@ -23,28 +21,24 @@ type twoStateCore struct {
 	srcName     enc.Name
 	srcSeq      uint64
 	local       StateVector
-	record      StateVector
 	scheduler   Scheduler
 	logger      *log.Entry
 	intCfg      *ndn.InterestConfig
 	localMtx    sync.Mutex
-	recordMtx   sync.Mutex
 	formal      bool
 	isListening bool
 	isActive    bool
 }
 
-func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Constants) *twoStateCore {
-	c := &twoStateCore{
+func newOneStateCore(app *eng.Engine, config *OneStateCoreConfig, constants *Constants) *oneStateCore {
+	c := &oneStateCore{
 		app:        app,
-		state:      new(int32),
 		constants:  constants,
 		subs:       make([]chan SyncUpdate, 0),
 		syncPrefix: config.SyncPrefix,
 		srcStr:     config.Source.String(),
 		srcName:    config.Source,
 		local:      NewStateVector(),
-		record:     NewStateVector(),
 		logger:     log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
@@ -53,11 +47,11 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		},
 		formal: config.FormalEncoding,
 	}
-	c.scheduler = NewScheduler(c.onTimer, constants.Interval, constants.IntervalRandomness)
+	c.scheduler = NewScheduler(c.sendInterest, constants.Interval, constants.IntervalRandomness)
 	return c
 }
 
-func (c *twoStateCore) Listen() {
+func (c *oneStateCore) Listen() {
 	err := c.app.AttachHandler(c.syncPrefix, c.onInterest)
 	if err != nil {
 		c.logger.Errorf("Unable to register handler: %+v", err)
@@ -72,13 +66,13 @@ func (c *twoStateCore) Listen() {
 	c.logger.Info("Sync-side Registered and Handled.")
 }
 
-func (c *twoStateCore) Activate(immediateStart bool) {
+func (c *oneStateCore) Activate(immediateStart bool) {
 	c.scheduler.Start(immediateStart)
 	c.isActive = true
 	c.logger.Info("Core Activated.")
 }
 
-func (c *twoStateCore) Shutdown() {
+func (c *oneStateCore) Shutdown() {
 	if c.isActive {
 		c.scheduler.Stop()
 	}
@@ -98,7 +92,7 @@ func (c *twoStateCore) Shutdown() {
 	c.logger.Info("Core Shutdown.")
 }
 
-func (c *twoStateCore) SetSeqno(seqno uint64) {
+func (c *oneStateCore) SetSeqno(seqno uint64) {
 	if seqno <= c.srcSeq {
 		c.logger.Warn("The Core was updated with a lower seqno.")
 		return
@@ -110,19 +104,19 @@ func (c *twoStateCore) SetSeqno(seqno uint64) {
 	c.scheduler.Skip()
 }
 
-func (c *twoStateCore) Seqno() uint64 {
+func (c *oneStateCore) Seqno() uint64 {
 	return c.srcSeq
 }
 
-func (c *twoStateCore) StateVector() StateVector {
+func (c *oneStateCore) StateVector() StateVector {
 	return c.local
 }
 
-func (c *twoStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
+func (c *oneStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	c.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
-func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
+func (c *oneStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	// TODO: VERIFY THE INTEREST
 	remote, err := ParseStateVector(enc.NewWireReader(interest.AppParam()), c.formal)
 	if err != nil {
@@ -130,14 +124,9 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		return
 	}
 	localNewer := c.mergeVectorToLocal(remote)
-	if atomic.LoadInt32(c.state) == suppressionState {
-		c.recordVector(remote)
-		return
-	}
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
-		atomic.StoreInt32(c.state, suppressionState)
 		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
 		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
@@ -145,18 +134,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	}
 }
 
-func (c *twoStateCore) onTimer() {
-	c.recordMtx.Lock()
-	defer c.recordMtx.Unlock()
-	localNewer := c.mergeVectorToLocal(c.record)
-	if atomic.LoadInt32(c.state) == steadyState || localNewer {
-		c.sendInterest()
-	}
-	atomic.StoreInt32(c.state, steadyState)
-	c.record = NewStateVector()
-}
-
-func (c *twoStateCore) sendInterest() {
+func (c *oneStateCore) sendInterest() {
 	// make the interest
 	// TODO: SIGN THE INTEREST WITH AUTHENTICATABLE KEY
 	// WARNING: SHA SIGNER PROVIDES NOTHING (signature only includes the appParams) & IS ONLY PLACEHOLDER
@@ -180,7 +158,7 @@ func (c *twoStateCore) sendInterest() {
 	}
 }
 
-func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
+func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		temp    uint64
@@ -208,17 +186,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	return isNewer
 }
 
-func (c *twoStateCore) recordVector(vector StateVector) {
-	c.recordMtx.Lock()
-	defer c.recordMtx.Unlock()
-	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		if c.record.Get(pair.Kstring) < pair.Value {
-			c.record.Set(pair.Kstring, pair.Kname, pair.Value, false)
-		}
-	}
-}
-
-func (c *twoStateCore) Subscribe() chan SyncUpdate {
+func (c *oneStateCore) Subscribe() chan SyncUpdate {
 	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
 	c.subs = append(c.subs, ch)
 	return ch
