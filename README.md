@@ -2,13 +2,13 @@
 
 ![Visual](/docs/README_VISUAL.png)
 
-![Test](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/test.yaml?branch=production&label=Test)
-![CodeQL](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/codeql.yml?branch=production&label=CodeQL)
-![CodeFactor](https://img.shields.io/codefactor/grade/github/justincpresley/ndn-sync/production?label=CodeFactor)
-![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync/production?label=Go)
-![Version](https://img.shields.io/github/v/tag/justincpresley/ndn-sync?label=Latest%20version)
-![Commits](https://img.shields.io/github/commits-since/justincpresley/ndn-sync/latest/production?label=Unreleased%20commits)
-![License](https://img.shields.io/github/license/justincpresley/ndn-sync?label=License)
+[![Test](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/test.yaml?branch=production&label=Test)][1]
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/justincpresley/ndn-sync/codeql.yml?branch=production&label=CodeQL)][2]
+[![CodeFactor](https://img.shields.io/codefactor/grade/github/justincpresley/ndn-sync/production?label=CodeFactor)][3]
+[![Language](https://img.shields.io/github/go-mod/go-version/justincpresley/ndn-sync/production?label=Go)][4]
+[![Version](https://img.shields.io/github/v/tag/justincpresley/ndn-sync?label=Latest%20version)][5]
+[![Commits](https://img.shields.io/github/commits-since/justincpresley/ndn-sync/latest/production?label=Unreleased%20commits)][6]
+[![License](https://img.shields.io/github/license/justincpresley/ndn-sync?label=License)][7]
 
 </div>
 
@@ -64,3 +64,11 @@ In addition, ***ndn-sync*** has more practical ways to get involved: [Issues](ht
 ## License
 
 ***ndn-sync*** is an open source project licensed under ISC. See LICENSE.md for more information.
+
+[1]: https://github.com/justincpresley/ndn-sync/actions/workflows/test.yaml
+[2]: https://github.com/justincpresley/ndn-sync/actions/workflows/codeql.yml
+[3]: https://www.codefactor.io/repository/github/justincpresley/ndn-sync
+[4]: https://go.dev/
+[5]: https://github.com/justincpresley/ndn-sync/releases
+[6]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...HEAD
+[7]: https://en.wikipedia.org/wiki/ISC_license
