@@ -45,10 +45,10 @@ func main() {
 
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
+	seqno := uint64(0)
 
 	fmt.Println("Activating Core ...")
 	config := &svs.TwoStateCoreConfig{
-		Source:         nid,
 		SyncPrefix:     syncPrefix,
 		FormalEncoding: false,
 	}
@@ -69,7 +69,8 @@ loopCount:
 		select {
 		// Send updates periodically
 		case <-send.C:
-			core.SetSeqno(core.Seqno() + 1)
+			seqno++
+			core.Update(nid, seqno)
 			send.Reset(time.Duration(*interval) * time.Millisecond)
 
 		// Receive code when available

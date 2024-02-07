@@ -13,9 +13,7 @@ func newNullCore() *nullCore                     { return &nullCore{} }
 func (c *nullCore) Listen()                      {}
 func (c *nullCore) Activate(immediateStart bool) {}
 func (c *nullCore) Shutdown()                    {}
-func (c *nullCore) SetSeqno(seqno uint64)        {}
-func (c *nullCore) Seqno() uint64                { return 0 }
+func (c *nullCore) Update(dataset enc.Name, seqno uint64) {}
 func (c *nullCore) StateVector() StateVector     { return NewStateVector() }
-func (c *nullCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
-}
+func (c *nullCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {}
 func (c *nullCore) Subscribe() chan SyncUpdate { return nil }

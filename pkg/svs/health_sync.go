@@ -19,7 +19,9 @@ type healthSync struct {
 	tracker     Tracker
 	constants   *Constants
 	groupPrefix enc.Name
+	srcName     enc.Name
 	srcStr      string
+	srcSeq      uint64
 	logger      *log.Entry
 	handleData  *healthHandlerData
 }
@@ -31,7 +33,6 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 
 	// TODO: switch to new core type (check then switch)
 	coreConfig := &TwoStateCoreConfig{
-		Source:         config.Source,
 		SyncPrefix:     syncPrefix,
 		FormalEncoding: config.FormalEncoding,
 	}
@@ -41,6 +42,7 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 		tracker:     NewTracker(config.Source.String(), constants),
 		constants:   constants,
 		groupPrefix: config.GroupPrefix,
+		srcName:     config.Source,
 		srcStr:      config.Source.String(),
 		logger:      logger,
 	}
@@ -84,7 +86,7 @@ func (s *healthSync) newHandling(data *healthHandlerData) {
 	go func() {
 		for {
 			if s.tracker.UntilBeat() < s.constants.MonitorInterval {
-				s.core.SetSeqno(s.core.Seqno() + 1)
+				s.core.Update(s.srcName, s.srcSeq)
 				s.tracker.Reset(s.srcStr)
 			}
 			s.tracker.Detect()

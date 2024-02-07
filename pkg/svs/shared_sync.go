@@ -31,6 +31,7 @@ type sharedSync struct {
 	missChan    chan SyncUpdate
 	groupPrefix enc.Name
 	srcName     enc.Name
+	srcSeq      uint64
 	storage     Database
 	intCfg      *ndn.InterestConfig
 	datCfg      *ndn.DataConfig
@@ -52,7 +53,6 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		return nil
 	}
 	coreConfig := &TwoStateCoreConfig{
-		Source:         config.Source,
 		SyncPrefix:     syncPrefix,
 		FormalEncoding: config.FormalEncoding,
 	}
@@ -159,8 +159,8 @@ func (s *sharedSync) NeedData(source enc.Name, seqno uint64, cache bool) {
 }
 
 func (s *sharedSync) PublishData(content []byte) {
-	seqno := s.core.Seqno() + 1
-	name := s.getDataName(s.srcName, seqno)
+	s.srcSeq++
+	name := s.getDataName(s.srcName, s.srcSeq)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
 		s.datCfg,
@@ -177,7 +177,7 @@ func (s *sharedSync) PublishData(content []byte) {
 	}
 	s.logger.Info("Publishing data " + name.String())
 	s.storage.Set(name.Bytes(), bytes)
-	s.core.SetSeqno(seqno)
+	s.core.Update(s.srcName, s.srcSeq)
 }
 
 func (s *sharedSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {

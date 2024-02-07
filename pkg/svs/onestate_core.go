@@ -3,6 +3,7 @@ package svs
 import (
 	"sync"
 	"time"
+	"slices"
 
 	log "github.com/apex/log"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
@@ -17,9 +18,7 @@ type oneStateCore struct {
 	constants   *Constants
 	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
-	srcStr      string
-	srcName     enc.Name
-	srcSeq      uint64
+	selfsets    []string
 	local       StateVector
 	scheduler   Scheduler
 	logger      *log.Entry
@@ -36,8 +35,7 @@ func newOneStateCore(app *eng.Engine, config *OneStateCoreConfig, constants *Con
 		constants:  constants,
 		subs:       make([]chan SyncUpdate, 0),
 		syncPrefix: config.SyncPrefix,
-		srcStr:     config.Source.String(),
-		srcName:    config.Source,
+		selfsets:   make([]string, 0),
 		local:      NewStateVector(),
 		logger:     log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
@@ -92,20 +90,28 @@ func (c *oneStateCore) Shutdown() {
 	c.logger.Info("Core Shutdown.")
 }
 
-func (c *oneStateCore) SetSeqno(seqno uint64) {
-	if seqno <= c.srcSeq {
-		c.logger.Warn("The Core was updated with a lower seqno.")
+func (c *oneStateCore) Update(dataset enc.Name, seqno uint64) {
+	if seqno == 0 {
+		c.logger.Warn("The Core was updated with a seqno of 0.")
 		return
 	}
-	c.srcSeq = seqno
+	datasetStr := dataset.String()
+	if seqno <= c.local.Get(datasetStr) {
+		c.logger.Warn("The Core was updated with a non-new seqno.")
+		return
+	}
+	if c.local.Get(datasetStr) == 0 {
+		c.selfsets = append(c.selfsets, datasetStr)
+	} else {
+		if !slices.Contains(c.selfsets, datasetStr){
+			c.logger.Warn("The Core was updated with a dataset not previously updated by the node.")
+			return
+		}
+	}
 	c.localMtx.Lock()
-	c.local.Set(c.srcStr, c.srcName, seqno, false)
+	c.local.Set(datasetStr, dataset, seqno, false)
 	c.localMtx.Unlock()
 	c.scheduler.Skip()
-}
-
-func (c *oneStateCore) Seqno() uint64 {
-	return c.srcSeq
 }
 
 func (c *oneStateCore) StateVector() StateVector {
@@ -170,7 +176,7 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 		if temp < pair.Value {
 			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
 			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
-		} else if pair.Kstring != c.srcStr && temp > pair.Value {
+		} else if !slices.Contains(c.selfsets, pair.Kstring) && temp > pair.Value {
 			isNewer = true
 		}
 	}

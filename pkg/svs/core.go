@@ -12,21 +12,18 @@ type Core interface {
 	Listen()
 	Activate(bool)
 	Shutdown()
-	SetSeqno(uint64)
-	Seqno() uint64
+	Update(enc.Name, uint64)
 	StateVector() StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
 	Subscribe() chan SyncUpdate
 }
 
 type OneStateCoreConfig struct {
-	Source         enc.Name
 	SyncPrefix     enc.Name
 	FormalEncoding bool
 }
 
 type TwoStateCoreConfig struct {
-	Source         enc.Name
 	SyncPrefix     enc.Name
 	FormalEncoding bool
 }
