@@ -31,7 +31,7 @@ func main() {
 	}
 
 	timer := eng.NewTimer()
-	face := eng.NewStreamFace("unix", "/var/run/nfd.sock", true)
+	face := eng.NewStreamFace("unix", "/var/run/nfd/nfd.sock", true)
 	app := eng.NewEngine(face, timer, sec.NewSha256IntSigner(timer), passAll)
 	err := app.Start()
 	if err != nil {
