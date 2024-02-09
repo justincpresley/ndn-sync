@@ -28,7 +28,7 @@ Long-lived Interests:   No
 Data Naming:            Sequential
 Packet Delivery:        Out-of-order
 Strengths:              Resilient, Low Latency
-Weaknesses:             Scalability, Naming
+Weaknesses:             Scalability, Naming, Set Ownership
 Additional Notes:       Key Establishment for Group
 ```
 

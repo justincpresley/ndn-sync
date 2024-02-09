@@ -1,6 +1,6 @@
 ISC License
 
-Copyright (c) 2022-2023, Justin C Presley
+Copyright (c) 2022-2024, Justin C Presley
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
