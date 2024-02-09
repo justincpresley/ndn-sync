@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [v0.0.0-alpha.13] - 2024-02-07
+## Added
+- `OneStateCore` option for testing purposes.
+
+## Changed
+- An SVS `StateVector` now resides within the application parameters' portion of a Sync Interest. While this is not follow the Spec currently, it will in due time as most libraries are incorporating this.
+- SVS `Core` now is entirely subscription-based and can support multiple channel listeners.
+- SVS `Core` is not tied to a particular dataset. You can now publish multiple datasets per node.
+- Changed SVS examples to follow NFD's new default Unix socket path.
+- Internal naming of variables and functions have been changed for clarity.
+- Updated dependencies.
+
 ## [v0.0.0-alpha.12] - 2023-08-31
 ## Added
 - SVS `Constants` now contain `enc.Component`s that are added in SVS's naming. This was not exposed previously.
@@ -130,7 +142,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.13...HEAD
+[v0.0.0-alpha.13]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...v0.0.0-alpha.13
 [v0.0.0-alpha.12]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.11...v0.0.0-alpha.12
 [v0.0.0-alpha.11]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.10...v0.0.0-alpha.11
 [v0.0.0-alpha.10]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.9...v0.0.0-alpha.10
