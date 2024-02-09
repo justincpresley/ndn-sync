@@ -12,7 +12,7 @@ type NativeSync interface {
 	Listen()
 	Activate(bool)
 	Shutdown()
-	NeedData(string, uint64)
+	NeedData(enc.Name, uint64)
 	PublishData([]byte)
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
 	Core() Core
@@ -24,14 +24,14 @@ type NativeConfig struct {
 	NamingScheme   NamingScheme
 	HandlingOption HandlingOption
 	StoragePath    string
-	DataCallback   func(source string, seqno uint64, data ndn.Data)
+	DataCallback   func(source enc.Name, seqno uint64, data ndn.Data)
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) NativeSync {
 	return newNativeSync(app, config, constants)
 }
 
-func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source string, seqno uint64, data ndn.Data)) *NativeConfig {
+func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source enc.Name, seqno uint64, data ndn.Data)) *NativeConfig {
 	return &NativeConfig{
 		Source:         source,
 		GroupPrefix:    group,

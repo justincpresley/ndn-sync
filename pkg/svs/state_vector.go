@@ -3,28 +3,29 @@ package svs
 import (
 	"errors"
 	"strconv"
+	"strings"
 
+	om "github.com/justincpresley/ndn-sync/util/orderedmap"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 type StateVector interface {
-	Set(source string, seqno uint64)
-	Get(source string) uint64
+	Set(string, enc.Name, uint64)
+	Get(string) uint64
 	String() string
 	Len() int
-	Entries() map[string]uint64
+	Entries() *om.OrderedMap[uint64]
 	ToComponent() enc.Component
 	EncodingLength() int
-	EncodeInto(buf []byte) int
+	EncodeInto([]byte) int
 }
 
 type stateVector struct {
-	// WARNING: ideally enc.Name, unable due to not implementing comparable
-	entries map[string]uint64
+	entries *om.OrderedMap[uint64]
 }
 
 func NewStateVector() StateVector {
-	return stateVector{entries: make(map[string]uint64)}
+	return stateVector{entries: om.New[uint64]()}
 }
 
 func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
@@ -79,36 +80,42 @@ func ParseStateVector(comp enc.Component) (ret StateVector, err error) {
 		seqno, _ = enc.ParseNat(buf[pos : pos+int(length)])
 		pos += int(length)
 		// add the entry
-		ret.Set(source.String(), uint64(seqno))
+		ret.Set(source.String(), source, uint64(seqno))
 	}
 	return ret, nil
 }
 
-func (sv stateVector) Set(source string, seqno uint64) {
-	sv.entries[source] = seqno
-}
-
-func (sv stateVector) Entries() map[string]uint64 {
-	return sv.entries
+func (sv stateVector) Set(source string, sname enc.Name, seqno uint64) {
+	sv.entries.Set(source, sname, seqno)
 }
 
 func (sv stateVector) Get(source string) uint64 {
-	return sv.entries[source]
+	if val, pres := sv.entries.Get(source); pres {
+		return val
+	}
+	return 0
 }
 
 func (sv stateVector) String() string {
-	str := ""
-	for key, ele := range sv.entries {
-		str += key + ":" + strconv.FormatUint(ele, 10) + " "
+	var b strings.Builder
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
+		b.WriteString(p.Kstring)
+		b.WriteString(":")
+		b.WriteString(strconv.FormatUint(p.Value, 10))
+		b.WriteString(" ")
 	}
-	if str != "" {
-		return str[:len(str)-1]
+	if b.Len() <= 0 {
+		return ""
 	}
-	return str
+	return b.String()[:b.Len()-1]
 }
 
 func (sv stateVector) Len() int {
-	return len(sv.entries)
+	return sv.entries.Len()
+}
+
+func (sv stateVector) Entries() *om.OrderedMap[uint64] {
+	return sv.entries
 }
 
 func (sv stateVector) ToComponent() enc.Component {
@@ -126,19 +133,17 @@ func (sv stateVector) EncodingLength() int {
 		entry int
 		total int
 		t     int
-		n     enc.Name
 	)
-	for key, ele := range sv.entries {
-		n, _ = enc.NameFromStr(key)
-		t = n.EncodingLength()
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
+		t = p.Kname.EncodingLength()
 		// source
 		entry = enc.TypeName.EncodingLength()
 		entry += enc.TLNum(t).EncodingLength()
 		entry += t
 		// seqno
 		entry += TypeEntrySeqno.EncodingLength()
-		entry += enc.TLNum(enc.Nat(ele).EncodingLength()).EncodingLength()
-		entry += enc.Nat(ele).EncodingLength()
+		entry += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodingLength()
+		entry += enc.Nat(p.Value).EncodingLength()
 		// entry
 		total += TypeEntry.EncodingLength()
 		total += enc.TLNum(entry).EncodingLength()
@@ -153,28 +158,26 @@ func (sv stateVector) EncodeInto(buf []byte) int {
 		offset   int
 		pos      int
 		t        int
-		n        enc.Name
 	)
-	for key, ele := range sv.entries {
-		n, _ = enc.NameFromStr(key)
-		t = n.EncodingLength()
+	for p := sv.entries.Front(); p != nil; p = p.Next() {
+		t = p.Kname.EncodingLength()
 		// entry length
 		entryLen = enc.TypeName.EncodingLength()
 		entryLen += enc.TLNum(t).EncodingLength()
 		entryLen += t
 		entryLen += TypeEntrySeqno.EncodingLength()
-		entryLen += enc.TLNum(enc.Nat(ele).EncodingLength()).EncodingLength()
-		entryLen += enc.Nat(ele).EncodingLength()
+		entryLen += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodingLength()
+		entryLen += enc.Nat(p.Value).EncodingLength()
 		offset = TypeEntry.EncodingLength() + enc.TLNum(entryLen).EncodingLength()
 		entryLen = offset
 		// source
 		entryLen += enc.TypeName.EncodeInto(buf[pos+entryLen:])
 		entryLen += enc.TLNum(t).EncodeInto(buf[pos+entryLen:])
-		entryLen += n.EncodeInto(buf[pos+entryLen:])
+		entryLen += p.Kname.EncodeInto(buf[pos+entryLen:])
 		// seqno
 		entryLen += TypeEntrySeqno.EncodeInto(buf[pos+entryLen:])
-		entryLen += enc.TLNum(enc.Nat(ele).EncodingLength()).EncodeInto(buf[pos+entryLen:])
-		entryLen += enc.Nat(ele).EncodeInto(buf[pos+entryLen:])
+		entryLen += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodeInto(buf[pos+entryLen:])
+		entryLen += enc.Nat(p.Value).EncodeInto(buf[pos+entryLen:])
 		// entry
 		entryLen -= offset
 		pos += TypeEntry.EncodeInto(buf[pos:])

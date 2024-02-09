@@ -34,7 +34,7 @@ func main() {
 	}
 
 	timer := eng.NewTimer()
-	face := eng.NewStreamFace("unix", "/var/run/nfd.sock", true)
+	face := eng.NewStreamFace("unix", "/var/run/nfd/nfd.sock", true)
 	app := eng.NewEngine(face, timer, sec.NewSha256IntSigner(timer), passAll)
 	err := app.Start()
 	if err != nil {
@@ -43,10 +43,10 @@ func main() {
 	}
 	defer app.Shutdown()
 
-	dataCall := func(source string, seqno uint64, data ndn.Data) {
+	dataCall := func(source enc.Name, seqno uint64, data ndn.Data) {
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
-			fmt.Println(source + ": " + string(data.Content().Join()))
+			fmt.Println(source.String() + ": " + string(data.Content().Join()))
 		} else {
 			fmt.Println("Unfetchable")
 		}
@@ -73,7 +73,7 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
-	recv := sync.Core().Chan()
+	recv := sync.Core().Subscribe()
 	fmt.Println("Starting Count ...")
 
 loopCount:

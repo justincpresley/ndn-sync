@@ -35,7 +35,7 @@ func main() {
 	}
 
 	timer := eng.NewTimer()
-	face := eng.NewStreamFace("unix", "/var/run/nfd.sock", true)
+	face := eng.NewStreamFace("unix", "/var/run/nfd/nfd.sock", true)
 	app := eng.NewEngine(face, timer, sec.NewSha256IntSigner(timer), passAll)
 	err := app.Start()
 	if err != nil {
@@ -46,18 +46,18 @@ func main() {
 
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	sourceName, _ := enc.NameFromStr(*source)
-	callback := func(source string, seqno uint64, data ndn.Data) {
+	callback := func(source enc.Name, seqno uint64, data ndn.Data) {
 		inputMutex.Lock()
 		fmt.Print("\n\033[1F\033[K")
 		if data != nil {
-			fmt.Println(source + ": " + string(data.Content().Join()))
+			fmt.Println(source.String() + ": " + string(data.Content().Join()))
 		} else {
 			fmt.Println("Unfetchable")
 		}
 		fmt.Print(input)
 		inputMutex.Unlock()
 	}
-	sync := svs.NewNativeSync(app, svs.GetBasicNativeConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
+	sync := svs.NewSharedSync(app, svs.GetBasicSharedConfig(sourceName, syncPrefix, callback), svs.GetDefaultConstants())
 	sync.Listen()
 	sync.Activate(true)
 	defer sync.Shutdown()

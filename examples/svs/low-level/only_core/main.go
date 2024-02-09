@@ -34,7 +34,7 @@ func main() {
 	}
 
 	timer := eng.NewTimer()
-	face := eng.NewStreamFace("unix", "/var/run/nfd.sock", true)
+	face := eng.NewStreamFace("unix", "/var/run/nfd/nfd.sock", true)
 	app := eng.NewEngine(face, timer, sec.NewSha256IntSigner(timer), passAll)
 	err := app.Start()
 	if err != nil {
@@ -45,10 +45,10 @@ func main() {
 
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
+	seqno := uint64(0)
 
 	fmt.Println("Activating Core ...")
-	config := &svs.CoreConfig{
-		Source:     nid,
+	config := &svs.TwoStateCoreConfig{
 		SyncPrefix: syncPrefix,
 	}
 	core := svs.NewCore(app, config, svs.GetDefaultConstants())
@@ -60,22 +60,23 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	send := time.NewTimer(time.Duration(*interval) * time.Millisecond)
-	recv := core.Chan()
+	recv := core.Subscribe()
 	fmt.Println("Reporting all updates only while updating Core.")
 
 loopCount:
 	for {
 		select {
-		// Send updates peroidically
+		// Send updates periodically
 		case <-send.C:
-			core.SetSeqno(core.Seqno() + 1)
+			seqno++
+			core.Update(nid, seqno)
 			send.Reset(time.Duration(*interval) * time.Millisecond)
 
-		// Receive code when avaliable
+		// Receive code when available
 		case missing := <-recv:
 			for _, m := range missing {
 				for m.LowSeqno() <= m.HighSeqno() {
-					fmt.Println(m.Source() + ": " + strconv.FormatUint(m.LowSeqno(), 10))
+					fmt.Println(m.Source().String() + ": " + strconv.FormatUint(m.LowSeqno(), 10))
 					m.Increment()
 				}
 			}

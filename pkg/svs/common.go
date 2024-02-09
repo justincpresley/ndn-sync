@@ -24,9 +24,9 @@ const (
 	SourceCentricHandling HandlingOption = 1
 )
 
-type CoreState int32
+type SyncUpdate []MissingData
 
 const (
-	Steady      CoreState = 0
-	Suppression CoreState = 1
+	steadyState int32 = iota
+	suppressionState
 )

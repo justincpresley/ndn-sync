@@ -13,7 +13,7 @@ import (
 )
 
 type nativeFetchItem struct {
-	source  string
+	source  enc.Name
 	seqno   uint64
 	retries uint
 }
@@ -26,16 +26,16 @@ type nativeSync struct {
 	app          *eng.Engine
 	core         Core
 	constants    *Constants
+	missChan     chan SyncUpdate
 	namingScheme NamingScheme
 	groupPrefix  enc.Name
-	source       enc.Name
-	sourceStr    string
+	srcName      enc.Name
+	srcSeq       uint64
 	storage      Database
 	intCfg       *ndn.InterestConfig
 	datCfg       *ndn.DataConfig
-	dataComp     enc.Component
 	logger       *log.Entry
-	dataCall     func(string, uint64, ndn.Data)
+	dataCall     func(enc.Name, uint64, ndn.Data)
 	fetchQueue   chan *nativeFetchItem
 	handleData   *nativeHandlerData
 	numFetches   *int32
@@ -45,14 +45,9 @@ type nativeSync struct {
 func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) *nativeSync {
 	var s *nativeSync
 	logger := log.WithField("module", "svs")
-	syncComp, _ := enc.ComponentFromStr("sync")
-	dataComp, _ := enc.ComponentFromStr("data")
-	syncPrefix := append(config.GroupPrefix, syncComp)
+	syncPrefix := append(config.GroupPrefix, constants.SyncComponent)
 
-	coreConfig := &CoreConfig{
-		Source:     config.Source,
-		SyncPrefix: syncPrefix,
-	}
+	coreConfig := &CoreConfig{SyncPrefix: syncPrefix}
 	storage, err := NewBoltDB(config.StoragePath, []byte("svs-packets"))
 	if err != nil {
 		logger.Errorf("Unable to create storage: %+v", err)
@@ -64,8 +59,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		constants:    constants,
 		namingScheme: config.NamingScheme,
 		groupPrefix:  config.GroupPrefix,
-		source:       config.Source,
-		sourceStr:    config.Source.String(),
+		srcName:      config.Source,
 		storage:      storage,
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
@@ -76,12 +70,12 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 			ContentType: utl.IdPtr(ndn.ContentTypeBlob),
 			Freshness:   utl.IdPtr(constants.DataPacketFreshness),
 		},
-		dataComp:   dataComp,
 		logger:     logger,
 		dataCall:   config.DataCallback,
 		fetchQueue: make(chan *nativeFetchItem, constants.InitialFetchQueueLength),
 		numFetches: new(int32),
 	}
+	s.missChan = s.core.Subscribe()
 
 	hData := &nativeHandlerData{
 		done: make(chan struct{}),
@@ -99,11 +93,11 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 }
 
 func (s *nativeSync) Listen() {
-	dataPrefix := append(s.groupPrefix, s.dataComp)
+	dataPrefix := append(s.groupPrefix, s.constants.DataComponent)
 	if s.namingScheme == GroupOrientedNaming {
-		dataPrefix = append(dataPrefix, s.source...)
+		dataPrefix = append(dataPrefix, s.srcName...)
 	} else {
-		dataPrefix = append(s.source, dataPrefix...)
+		dataPrefix = append(s.srcName, dataPrefix...)
 	}
 	err := s.app.AttachHandler(dataPrefix, s.onInterest)
 	if err != nil {
@@ -128,11 +122,11 @@ func (s *nativeSync) Activate(immediateStart bool) {
 func (s *nativeSync) Shutdown() {
 	s.core.Shutdown()
 	if s.isListening {
-		dataPrefix := append(s.groupPrefix, s.dataComp)
+		dataPrefix := append(s.groupPrefix, s.constants.DataComponent)
 		if s.namingScheme == GroupOrientedNaming {
-			dataPrefix = append(dataPrefix, s.source...)
+			dataPrefix = append(dataPrefix, s.srcName...)
 		} else {
-			dataPrefix = append(s.source, dataPrefix...)
+			dataPrefix = append(s.srcName, dataPrefix...)
 		}
 		err := s.app.DetachHandler(dataPrefix)
 		if err != nil {
@@ -149,7 +143,7 @@ func (s *nativeSync) Shutdown() {
 	s.logger.Info("Sync Shutdown.")
 }
 
-func (s *nativeSync) NeedData(source string, seqno uint64) {
+func (s *nativeSync) NeedData(source enc.Name, seqno uint64) {
 	i := &nativeFetchItem{
 		source:  source,
 		seqno:   seqno,
@@ -164,8 +158,8 @@ func (s *nativeSync) NeedData(source string, seqno uint64) {
 }
 
 func (s *nativeSync) PublishData(content []byte) {
-	seqno := s.core.Seqno() + 1
-	name := s.getDataName(s.sourceStr, seqno)
+	s.srcSeq++
+	name := s.getDataName(s.srcName, s.srcSeq)
 	wire, _, err := s.app.Spec().MakeData(
 		name,
 		s.datCfg,
@@ -182,7 +176,7 @@ func (s *nativeSync) PublishData(content []byte) {
 	}
 	s.logger.Info("Publishing data " + name.String())
 	s.storage.Set(name.Bytes(), bytes)
-	s.core.SetSeqno(seqno)
+	s.core.Update(s.srcName, s.srcSeq)
 }
 
 func (s *nativeSync) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
@@ -240,13 +234,12 @@ func (s *nativeSync) onInterest(interest ndn.Interest, rawInterest enc.Wire, sig
 	}
 }
 
-func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
-	dataName := append(s.groupPrefix, s.dataComp)
-	src, _ := enc.NameFromStr(source)
+func (s *nativeSync) getDataName(source enc.Name, seqno uint64) enc.Name {
+	dataName := append(s.groupPrefix, s.constants.DataComponent)
 	if s.namingScheme == GroupOrientedNaming {
-		dataName = append(dataName, src...)
+		dataName = append(dataName, source...)
 	} else {
-		dataName = append(src, dataName...)
+		dataName = append(source, dataName...)
 	}
 	dataName = append(dataName, enc.NewSequenceNumComponent(seqno))
 	return dataName
@@ -254,10 +247,9 @@ func (s *nativeSync) getDataName(source string, seqno uint64) enc.Name {
 
 func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 	go func() {
-		missingChan := s.Core().Chan()
 		for {
 			select {
-			case missing, ok := <-missingChan:
+			case missing, ok := <-s.missChan:
 				if !ok {
 					data.done <- struct{}{}
 					return
