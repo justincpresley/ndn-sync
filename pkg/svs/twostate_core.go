@@ -1,10 +1,10 @@
 package svs
 
 import (
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
-	"slices"
 
 	log "github.com/apex/log"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
@@ -109,7 +109,7 @@ func (c *twoStateCore) Update(dataset enc.Name, seqno uint64) {
 	if c.local.Get(datasetStr) == 0 {
 		c.selfsets = append(c.selfsets, datasetStr)
 	} else {
-		if !slices.Contains(c.selfsets, datasetStr){
+		if !slices.Contains(c.selfsets, datasetStr) {
 			c.logger.Warn("The Core was updated with a dataset not previously updated by the node.")
 			return
 		}
