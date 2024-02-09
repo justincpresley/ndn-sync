@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-## [v0.0.0-alpha.13] - 2024-02-07
+## [v0.0.0-alpha.13] - 2024-02-09
 ## Added
 - `OneStateCore` option for testing purposes.
 
