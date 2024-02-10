@@ -24,8 +24,9 @@ type OneStateCoreConfig struct {
 }
 
 type TwoStateCoreConfig struct {
-	SyncPrefix     enc.Name
-	FormalEncoding bool
+	SyncPrefix           enc.Name
+	FormalEncoding       bool
+	EfficientSuppression bool
 }
 
 // TODO: change after threestatecore is added

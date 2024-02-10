@@ -19,13 +19,14 @@ type NativeSync interface {
 }
 
 type NativeConfig struct {
-	Source         enc.Name
-	GroupPrefix    enc.Name
-	NamingScheme   NamingScheme
-	HandlingOption HandlingOption
-	StoragePath    string
-	DataCallback   func(source enc.Name, seqno uint64, data ndn.Data)
-	FormalEncoding bool
+	Source               enc.Name
+	GroupPrefix          enc.Name
+	NamingScheme         NamingScheme
+	HandlingOption       HandlingOption
+	StoragePath          string
+	DataCallback         func(source enc.Name, seqno uint64, data ndn.Data)
+	FormalEncoding       bool
+	EfficientSuppression bool
 }
 
 func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) NativeSync {

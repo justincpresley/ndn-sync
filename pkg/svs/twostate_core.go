@@ -21,6 +21,7 @@ type twoStateCore struct {
 	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
 	selfsets    []string
+	updateTimes map[string]time.Time
 	local       StateVector
 	record      StateVector
 	scheduler   Scheduler
@@ -29,27 +30,30 @@ type twoStateCore struct {
 	localMtx    sync.Mutex
 	recordMtx   sync.Mutex
 	formal      bool
+	effSuppress bool
 	isListening bool
 	isActive    bool
 }
 
 func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
-		app:        app,
-		state:      new(int32),
-		constants:  constants,
-		subs:       make([]chan SyncUpdate, 0),
-		syncPrefix: config.SyncPrefix,
-		selfsets:   make([]string, 0),
-		local:      NewStateVector(),
-		record:     NewStateVector(),
-		logger:     log.WithField("module", "svs"),
+		app:         app,
+		state:       new(int32),
+		constants:   constants,
+		subs:        make([]chan SyncUpdate, 0),
+		syncPrefix:  config.SyncPrefix,
+		selfsets:    make([]string, 0),
+		updateTimes: make(map[string]time.Time),
+		local:       NewStateVector(),
+		record:      NewStateVector(),
+		logger:      log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
 			Lifetime:    utl.IdPtr(constants.SyncInterestLifeTime),
 		},
-		formal: config.FormalEncoding,
+		formal:      config.FormalEncoding,
+		effSuppress: config.EfficientSuppression,
 	}
 	c.scheduler = NewScheduler(c.onTimer, constants.Interval, constants.IntervalRandomness)
 	return c
@@ -117,6 +121,7 @@ func (c *twoStateCore) Update(dataset enc.Name, seqno uint64) {
 	c.localMtx.Lock()
 	c.local.Set(datasetStr, dataset, seqno, false)
 	c.localMtx.Unlock()
+	c.updateTimes[datasetStr] = time.Now()
 	c.scheduler.Skip()
 }
 
@@ -135,11 +140,11 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		c.logger.Warnf("Received unparsable statevector: %+v", err)
 		return
 	}
-	localNewer := c.mergeVectorToLocal(remote)
 	if atomic.LoadInt32(c.state) == suppressionState {
 		c.recordVector(remote)
 		return
 	}
+	localNewer := c.mergeVectorToLocal(remote)
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
@@ -152,14 +157,18 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 }
 
 func (c *twoStateCore) onTimer() {
-	c.recordMtx.Lock()
-	defer c.recordMtx.Unlock()
-	localNewer := c.mergeVectorToLocal(c.record)
-	if atomic.LoadInt32(c.state) == steadyState || localNewer {
+	if atomic.LoadInt32(c.state) == steadyState {
 		c.sendInterest()
+	} else {
+		c.recordMtx.Lock()
+		defer c.recordMtx.Unlock()
+		localNewer := c.mergeRecordToLocal(c.record)
+		if localNewer {
+			c.sendInterest()
+		}
+		atomic.StoreInt32(c.state, steadyState)
+		c.record = NewStateVector()
 	}
-	atomic.StoreInt32(c.state, steadyState)
-	c.record = NewStateVector()
 }
 
 func (c *twoStateCore) sendInterest() {
@@ -198,8 +207,11 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 		if temp < pair.Value {
 			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
 			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
+			c.updateTimes[pair.Kstring] = time.Now()
 		} else if !slices.Contains(c.selfsets, pair.Kstring) && temp > pair.Value {
-			isNewer = true
+			if !c.effSuppress || time.Since(c.updateTimes[pair.Kstring]) >= c.constants.BriefInterval {
+				isNewer = true
+			}
 		}
 	}
 	if vector.Len() < c.local.Len() {
@@ -215,13 +227,48 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 }
 
 func (c *twoStateCore) recordVector(vector StateVector) {
+	var (
+		missing = make(SyncUpdate, 0)
+		temp    uint64
+	)
 	c.recordMtx.Lock()
-	defer c.recordMtx.Unlock()
 	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
+		temp = c.local.Get(pair.Kstring)
 		if c.record.Get(pair.Kstring) < pair.Value {
+			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
 			c.record.Set(pair.Kstring, pair.Kname, pair.Value, false)
 		}
 	}
+	c.recordMtx.Unlock()
+	if len(missing) != 0 {
+		for _, sub := range c.subs {
+			sub <- missing
+		}
+	}
+}
+
+func (c *twoStateCore) mergeRecordToLocal(vector StateVector) bool {
+	var (
+		temp    uint64
+		isNewer bool
+	)
+	c.localMtx.Lock()
+	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
+		temp = c.local.Get(pair.Kstring)
+		if temp < pair.Value {
+			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
+			c.updateTimes[pair.Kstring] = time.Now()
+		} else if !slices.Contains(c.selfsets, pair.Kstring) && temp > pair.Value {
+			if !c.effSuppress || time.Since(c.updateTimes[pair.Kstring]) >= c.constants.BriefInterval {
+				isNewer = true
+			}
+		}
+	}
+	if vector.Len() < c.local.Len() {
+		isNewer = true
+	}
+	c.localMtx.Unlock()
+	return isNewer
 }
 
 func (c *twoStateCore) Subscribe() chan SyncUpdate {

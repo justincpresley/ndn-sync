@@ -19,12 +19,13 @@ type SharedSync interface {
 }
 
 type SharedConfig struct {
-	Source         enc.Name
-	GroupPrefix    enc.Name
-	HandlingOption HandlingOption
-	StoragePath    string
-	DataCallback   func(enc.Name, uint64, ndn.Data)
-	FormalEncoding bool
+	Source               enc.Name
+	GroupPrefix          enc.Name
+	HandlingOption       HandlingOption
+	StoragePath          string
+	DataCallback         func(enc.Name, uint64, ndn.Data)
+	FormalEncoding       bool
+	EfficientSuppression bool
 	// high-level only
 	CacheOthers bool
 }

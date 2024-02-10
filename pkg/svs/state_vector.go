@@ -26,6 +26,10 @@ func NewStateVector() StateVector {
 	return stateVector{entries: om.New[uint64](om.LatestEntriesFirst)}
 }
 
+func CopyStateVector(sv stateVector) StateVector {
+	return stateVector{entries: sv.entries.Copy()}
+}
+
 func ParseStateVector(reader enc.ParseReader, formal bool) (StateVector, error) {
 	if formal {
 		return parseFormalStateVector(reader)

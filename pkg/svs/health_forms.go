@@ -15,9 +15,10 @@ type HealthSync interface {
 }
 
 type HealthConfig struct {
-	Source         enc.Name
-	GroupPrefix    enc.Name
-	FormalEncoding bool
+	Source               enc.Name
+	GroupPrefix          enc.Name
+	FormalEncoding       bool
+	EfficientSuppression bool
 }
 
 func NewHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) HealthSync {
