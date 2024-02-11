@@ -35,13 +35,13 @@ func NewNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 
 func GetBasicNativeConfig(source enc.Name, group enc.Name, callback func(source enc.Name, seqno uint64, data ndn.Data)) *NativeConfig {
 	return &NativeConfig{
-		Source:         source,
-		GroupPrefix:    group,
-		NamingScheme:   SourceOrientedNaming,
-		HandlingOption: SourceCentricHandling,
-		StoragePath:    "./" + source.String() + "_bolt.db",
-		DataCallback:   callback,
-		FormalEncoding: false,
+		Source:               source,
+		GroupPrefix:          group,
+		NamingScheme:         SourceOrientedNaming,
+		HandlingOption:       SourceCentricHandling,
+		StoragePath:          "./" + source.String() + "_bolt.db",
+		DataCallback:         callback,
+		FormalEncoding:       false,
 		EfficientSuppression: true,
 	}
 }

@@ -233,10 +233,13 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 	)
 	c.recordMtx.Lock()
 	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.local.Get(pair.Kstring)
 		if c.record.Get(pair.Kstring) < pair.Value {
+			c.record.Set(pair.Kstring, pair.Kname, pair.Value, true)
+		}
+		if c.local.Get(pair.Kstring) < pair.Value {
 			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
-			c.record.Set(pair.Kstring, pair.Kname, pair.Value, false)
+			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
+			c.updateTimes[pair.Kstring] = time.Now()
 		}
 	}
 	c.recordMtx.Unlock()
@@ -248,17 +251,10 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 }
 
 func (c *twoStateCore) mergeRecordToLocal(vector StateVector) bool {
-	var (
-		temp    uint64
-		isNewer bool
-	)
+	var isNewer bool
 	c.localMtx.Lock()
 	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.local.Get(pair.Kstring)
-		if temp < pair.Value {
-			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
-			c.updateTimes[pair.Kstring] = time.Now()
-		} else if !slices.Contains(c.selfsets, pair.Kstring) && temp > pair.Value {
+		if c.local.Get(pair.Kstring) > pair.Value && !slices.Contains(c.selfsets, pair.Kstring) {
 			if !c.effSuppress || time.Since(c.updateTimes[pair.Kstring]) >= c.constants.BriefInterval {
 				isNewer = true
 			}

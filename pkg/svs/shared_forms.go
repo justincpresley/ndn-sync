@@ -36,13 +36,13 @@ func NewSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 
 func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source enc.Name, seqno uint64, data ndn.Data)) *SharedConfig {
 	return &SharedConfig{
-		Source:         source,
-		GroupPrefix:    group,
-		HandlingOption: SourceCentricHandling,
-		StoragePath:    "./" + source.String() + "_bolt.db",
-		DataCallback:   callback,
-		FormalEncoding: false,
+		Source:               source,
+		GroupPrefix:          group,
+		HandlingOption:       SourceCentricHandling,
+		StoragePath:          "./" + source.String() + "_bolt.db",
+		DataCallback:         callback,
+		FormalEncoding:       false,
 		EfficientSuppression: true,
-		CacheOthers:    true,
+		CacheOthers:          true,
 	}
 }
