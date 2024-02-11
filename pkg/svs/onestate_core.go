@@ -90,26 +90,26 @@ func (c *oneStateCore) Shutdown() {
 	c.logger.Info("Core Shutdown.")
 }
 
-func (c *oneStateCore) Update(dataset enc.Name, seqno uint64) {
+func (c *oneStateCore) Update(dsname enc.Name, seqno uint64) {
 	if seqno == 0 {
 		c.logger.Warn("The Core was updated with a seqno of 0.")
 		return
 	}
-	datasetStr := dataset.String()
-	if seqno <= c.local.Get(datasetStr) {
+	dsstr := dsname.String()
+	if seqno <= c.local.Get(dsstr) {
 		c.logger.Warn("The Core was updated with a non-new seqno.")
 		return
 	}
-	if c.local.Get(datasetStr) == 0 {
-		c.selfsets = append(c.selfsets, datasetStr)
+	if c.local.Get(dsstr) == 0 {
+		c.selfsets = append(c.selfsets, dsstr)
 	} else {
-		if !slices.Contains(c.selfsets, datasetStr) {
+		if !slices.Contains(c.selfsets, dsstr) {
 			c.logger.Warn("The Core was updated with a dataset not previously updated by the node.")
 			return
 		}
 	}
 	c.localMtx.Lock()
-	c.local.Set(datasetStr, dataset, seqno, false)
+	c.local.Set(dsstr, dsname, seqno, false)
 	c.localMtx.Unlock()
 	c.scheduler.Skip()
 }
@@ -133,10 +133,7 @@ func (c *oneStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 	if !localNewer {
 		c.scheduler.Reset()
 	} else {
-		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
-		if c.scheduler.TimeLeft() > delay {
-			c.scheduler.Set(delay)
-		}
+		c.scheduler.Skip()
 	}
 }
 
@@ -167,16 +164,16 @@ func (c *oneStateCore) sendInterest() {
 func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
-		temp    uint64
+		lVal    uint64
 		isNewer bool
 	)
 	c.localMtx.Lock()
-	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.local.Get(pair.Kstr)
-		if temp < pair.Val {
-			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Val))
-			c.local.Set(pair.Kstr, pair.Kname, pair.Val, false)
-		} else if !slices.Contains(c.selfsets, pair.Kstr) && temp > pair.Val {
+	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
+		lVal = c.local.Get(p.Kstr)
+		if lVal < p.Val {
+			missing = append(missing, NewMissingData(p.Kname, lVal+1, p.Val))
+			c.local.Set(p.Kstr, p.Kname, p.Val, false)
+		} else if !slices.Contains(c.selfsets, p.Kstr) && lVal > p.Val {
 			isNewer = true
 		}
 	}
