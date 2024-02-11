@@ -43,7 +43,7 @@ func (sv stateVector) Set(dsstr string, dsname enc.Name, seqno uint64, old bool)
 }
 
 func (sv stateVector) Get(dsstr string) uint64 {
-	if val, pres := sv.entries.Get(dsstr); pres {
+	if val, ok := sv.entries.Get(dsstr); ok {
 		return val
 	}
 	return 0
@@ -83,33 +83,33 @@ func (sv stateVector) Encode(formal bool) enc.Wire {
 	if formal {
 		tl, ls := sv.formalEncodingLengths()
 		// length
-		e := TypeVector.EncodingLength()
-		e += enc.TLNum(tl).EncodingLength()
-		e += tl
+		pos := TypeVector.EncodingLength()
+		pos += enc.TLNum(tl).EncodingLength()
+		pos += tl
 		// space
-		wire := make(enc.Wire, 1)
-		wire[0] = make([]byte, e)
-		buf := wire[0]
+		ret := make(enc.Wire, 1)
+		ret[0] = make([]byte, pos)
+		buf := ret[0]
 		// encode
-		off := TypeVector.EncodeInto(buf)
-		off += enc.TLNum(tl).EncodeInto(buf[off:])
-		sv.formalEncodeInto(buf[off:], ls)
-		return wire
+		pos = TypeVector.EncodeInto(buf)
+		pos += enc.TLNum(tl).EncodeInto(buf[pos:])
+		sv.formalEncodeInto(buf[pos:], ls)
+		return ret
 	} else {
 		tl := sv.informalEncodingLength()
 		// length
-		e := TypeVector.EncodingLength()
-		e += enc.TLNum(tl).EncodingLength()
-		e += tl
+		pos := TypeVector.EncodingLength()
+		pos += enc.TLNum(tl).EncodingLength()
+		pos += tl
 		// space
-		wire := make(enc.Wire, 1)
-		wire[0] = make([]byte, e)
-		buf := wire[0]
+		ret := make(enc.Wire, 1)
+		ret[0] = make([]byte, pos)
+		buf := ret[0]
 		// encode
-		off := TypeVector.EncodeInto(buf)
-		off += enc.TLNum(tl).EncodeInto(buf[off:])
-		sv.informalEncodeInto(buf[off:])
-		return wire
+		pos = TypeVector.EncodeInto(buf)
+		pos += enc.TLNum(tl).EncodeInto(buf[pos:])
+		sv.informalEncodeInto(buf[pos:])
+		return ret
 	}
 }
 

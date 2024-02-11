@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Changed
 - Internal naming of variables and functions have been changed for clarity.
+- Reuse of a variable during `StateVector` encoding.
 
 ## Fixed
 - While a SVS `Core` is in `Suppression`, Incoming `StateVector`s are handled much more efficiently. Only loops through the `StateVector` entries once instead of twice.
