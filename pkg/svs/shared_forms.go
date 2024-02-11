@@ -42,6 +42,7 @@ func GetBasicSharedConfig(source enc.Name, group enc.Name, callback func(source 
 		StoragePath:    "./" + source.String() + "_bolt.db",
 		DataCallback:   callback,
 		FormalEncoding: false,
+		EfficientSuppression: true,
 		CacheOthers:    true,
 	}
 }
