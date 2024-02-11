@@ -38,29 +38,29 @@ func ParseStateVector(reader enc.ParseReader, formal bool) (StateVector, error) 
 	}
 }
 
-func (sv stateVector) Set(source string, sname enc.Name, seqno uint64, old bool) {
-	sv.entries.Set(source, sname, seqno, om.MetaV{Old: old})
+func (sv stateVector) Set(dsstr string, dsname enc.Name, seqno uint64, old bool) {
+	sv.entries.Set(dsstr, dsname, seqno, om.MetaV{Old: old})
 }
 
-func (sv stateVector) Get(source string) uint64 {
-	if val, pres := sv.entries.Get(source); pres {
+func (sv stateVector) Get(dsstr string) uint64 {
+	if val, pres := sv.entries.Get(dsstr); pres {
 		return val
 	}
 	return 0
 }
 
 func (sv stateVector) String() string {
-	var b strings.Builder
+	var ret strings.Builder
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		b.WriteString(p.Kstring)
-		b.WriteString(":")
-		b.WriteString(strconv.FormatUint(p.Value, 10))
-		b.WriteString(" ")
+		ret.WriteString(p.Kstr)
+		ret.WriteString(":")
+		ret.WriteString(strconv.FormatUint(p.Val, 10))
+		ret.WriteString(" ")
 	}
-	if b.Len() <= 0 {
+	if ret.Len() <= 0 {
 		return ""
 	}
-	return b.String()[:b.Len()-1]
+	return ret.String()[:ret.Len()-1]
 }
 
 func (sv stateVector) Len() int {
@@ -68,11 +68,11 @@ func (sv stateVector) Len() int {
 }
 
 func (sv stateVector) Total() uint64 {
-	var total uint64
+	var ret uint64
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
-		total += p.Value
+		ret += p.Val
 	}
-	return total
+	return ret
 }
 
 func (sv stateVector) Entries() *om.OrderedMap[uint64] {
@@ -126,8 +126,8 @@ func (sv stateVector) formalEncodingLengths() (int, []int) {
 		e += nl
 		// seqno
 		e += TypeEntrySeqno.EncodingLength()
-		e += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodingLength()
-		e += enc.Nat(p.Value).EncodingLength()
+		e += enc.TLNum(enc.Nat(p.Val).EncodingLength()).EncodingLength()
+		e += enc.Nat(p.Val).EncodingLength()
 		// entry
 		tl += TypeEntry.EncodingLength()
 		tl += enc.TLNum(e).EncodingLength()
@@ -151,8 +151,8 @@ func (sv stateVector) formalEncodeInto(buf []byte, ls []int) int {
 		off += p.Kname.EncodeInto(buf[pos+off:])
 		// seqno
 		off += TypeEntrySeqno.EncodeInto(buf[pos+off:])
-		off += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodeInto(buf[pos+off:])
-		enc.Nat(p.Value).EncodeInto(buf[pos+off:])
+		off += enc.TLNum(enc.Nat(p.Val).EncodingLength()).EncodeInto(buf[pos+off:])
+		enc.Nat(p.Val).EncodeInto(buf[pos+off:])
 		// entry
 		pos += TypeEntry.EncodeInto(buf[pos:])
 		pos += enc.TLNum(el).EncodeInto(buf[pos:])
@@ -174,8 +174,8 @@ func (sv stateVector) informalEncodingLength() int {
 		e += nl
 		// seqno
 		e += TypeEntrySeqno.EncodingLength()
-		e += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodingLength()
-		e += enc.Nat(p.Value).EncodingLength()
+		e += enc.TLNum(enc.Nat(p.Val).EncodingLength()).EncodingLength()
+		e += enc.Nat(p.Val).EncodingLength()
 	}
 	return e
 }
@@ -189,8 +189,8 @@ func (sv stateVector) informalEncodeInto(buf []byte) int {
 		pos += p.Kname.EncodeInto(buf[pos:])
 		// seqno
 		pos += TypeEntrySeqno.EncodeInto(buf[pos:])
-		pos += enc.TLNum(enc.Nat(p.Value).EncodingLength()).EncodeInto(buf[pos:])
-		pos += enc.Nat(p.Value).EncodeInto(buf[pos:])
+		pos += enc.TLNum(enc.Nat(p.Val).EncodingLength()).EncodeInto(buf[pos:])
+		pos += enc.Nat(p.Val).EncodeInto(buf[pos:])
 	}
 	return pos
 }
@@ -200,7 +200,7 @@ func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
 		return NewStateVector(), enc.ErrBufferOverflow
 	}
 	var (
-		source enc.Name
+		dsname enc.Name
 		seqno  enc.Nat
 		l, t   enc.TLNum
 		b      enc.Buffer
@@ -238,7 +238,7 @@ func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		// source
+		// dsname
 		t, err = enc.ReadTLNum(reader)
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
@@ -250,7 +250,7 @@ func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		source, err = enc.ReadName(reader.Delegate(int(l)))
+		dsname, err = enc.ReadName(reader.Delegate(int(l)))
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
@@ -272,7 +272,7 @@ func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
 		}
 		seqno, _ = enc.ParseNat(b)
 		// add
-		ret.Set(source.String(), source, uint64(seqno), true)
+		ret.Set(dsname.String(), dsname, uint64(seqno), true)
 	}
 	return ret, nil
 }
@@ -282,7 +282,7 @@ func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
 		return NewStateVector(), enc.ErrBufferOverflow
 	}
 	var (
-		source enc.Name
+		dsname enc.Name
 		seqno  enc.Nat
 		l, t   enc.TLNum
 		b      enc.Buffer
@@ -308,7 +308,7 @@ func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
 	// entries
 	end = int(l)
 	for reader.Pos() < end {
-		// source
+		// dsname
 		t, err = enc.ReadTLNum(reader)
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
@@ -320,7 +320,7 @@ func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
-		source, err = enc.ReadName(reader.Delegate(int(l)))
+		dsname, err = enc.ReadName(reader.Delegate(int(l)))
 		if err != nil {
 			return ret, enc.ErrFailToParse{TypeNum: t, Err: err}
 		}
@@ -342,7 +342,7 @@ func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
 		}
 		seqno, _ = enc.ParseNat(b)
 		// add
-		ret.Set(source.String(), source, uint64(seqno), true)
+		ret.Set(dsname.String(), dsname, uint64(seqno), true)
 	}
 	return ret, nil
 }

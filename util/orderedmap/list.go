@@ -2,9 +2,9 @@ package orderedmap
 
 type Element[K, Z, V any] struct {
 	next, prev *Element[K, Z, V]
-	Kstring    K
+	Kstr       K
 	Kname      Z
-	Value      V
+	Val        V
 }
 
 func (e *Element[K, Z, V]) Next() *Element[K, Z, V] { return e.next }

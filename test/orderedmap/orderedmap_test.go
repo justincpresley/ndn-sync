@@ -30,7 +30,7 @@ func TestBasicFeatures(t *testing.T) {
 	for i := 0; i < n; i++ {
 		e := m.GetElement(strconv.Itoa(i))
 		assert.NotNil(t, e)
-		assert.Equal(t, 2*i, e.Value)
+		assert.Equal(t, 2*i, e.Val)
 	}
 }
 
@@ -152,8 +152,8 @@ func assertOrderedPairsEqualFromBack[V any](t *testing.T, m *om.OrderedMap[V], e
 	if assert.Equal(t, len(expectedKeys), len(expectedValues)) && assert.Equal(t, len(expectedKeys), m.Len()) {
 		i := m.Len() - 1
 		for e := m.Back(); e != nil; e = e.Prev() {
-			assert.Equal(t, expectedKeys[i], e.Kstring)
-			assert.Equal(t, expectedValues[i], e.Value)
+			assert.Equal(t, expectedKeys[i], e.Kstr)
+			assert.Equal(t, expectedValues[i], e.Val)
 			i--
 		}
 	}
@@ -163,8 +163,8 @@ func assertOrderedPairsEqualFromFront[V any](t *testing.T, m *om.OrderedMap[V], 
 	if assert.Equal(t, len(expectedKeys), len(expectedValues)) && assert.Equal(t, len(expectedKeys), m.Len()) {
 		i := m.Len() - 1
 		for e := m.Back(); e != nil; e = e.Prev() {
-			assert.Equal(t, expectedKeys[i], e.Kstring)
-			assert.Equal(t, expectedValues[i], e.Value)
+			assert.Equal(t, expectedKeys[i], e.Kstr)
+			assert.Equal(t, expectedValues[i], e.Val)
 			i--
 		}
 	}

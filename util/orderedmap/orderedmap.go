@@ -27,76 +27,76 @@ func (om *OrderedMap[V]) Copy() *OrderedMap[V] {
 		i, e *Element[string, enc.Name, V]
 	)
 	for i = om.Front(); i != nil; i = i.Next() {
-		e = &Element[string, enc.Name, V]{Kstring: i.Kstring, Kname: i.Kname, Value: i.Value}
+		e = &Element[string, enc.Name, V]{Kstr: i.Kstr, Kname: i.Kname, Val: i.Val}
 		ret.ll.PushBack(e)
-		om.kv[e.Kstring] = e
+		om.kv[e.Kstr] = e
 	}
 	return ret
 }
 
-func (om *OrderedMap[V]) Get(key string) (val V, ok bool) {
-	e, ok := om.kv[key]
+func (om *OrderedMap[V]) Get(kstr string) (val V, ok bool) {
+	e, ok := om.kv[kstr]
 	if ok {
-		val = e.Value
+		val = e.Val
 	}
 	return
 }
 
-func (om *OrderedMap[V]) GetElement(key string) *Element[string, enc.Name, V] {
-	e, ok := om.kv[key]
+func (om *OrderedMap[V]) GetElement(kstr string) *Element[string, enc.Name, V] {
+	e, ok := om.kv[kstr]
 	if ok {
 		return e
 	}
 	return nil
 }
 
-func (om *OrderedMap[V]) Remove(key string) bool {
-	e, ok := om.kv[key]
+func (om *OrderedMap[V]) Remove(kstr string) bool {
+	e, ok := om.kv[kstr]
 	if ok {
 		om.ll.Remove(e)
-		delete(om.kv, key)
+		delete(om.kv, kstr)
 	}
 	return ok
 }
 
-func (om *OrderedMap[V]) Set(kstring string, kname enc.Name, value V, mv MetaV) bool {
+func (om *OrderedMap[V]) Set(kstr string, kname enc.Name, val V, mv MetaV) bool {
 	switch om.oo {
 	case LatestEntriesFirst:
-		return om.setLatestEntriesFirst(kstring, kname, value, mv.Old)
+		return om.setLatestEntriesFirst(kstr, kname, val, mv.Old)
 	default:
-		return om.setCanonical(kstring, kname, value)
+		return om.setCanonical(kstr, kname, val)
 	}
 }
 
-func (om *OrderedMap[V]) setCanonical(kstring string, kname enc.Name, value V) bool {
-	e, ok := om.kv[kstring]
+func (om *OrderedMap[V]) setCanonical(kstr string, kname enc.Name, val V) bool {
+	e, ok := om.kv[kstr]
 	if ok {
-		e.Value = value
+		e.Val = val
 		return true
 	}
-	e = &Element[string, enc.Name, V]{Kstring: kstring, Kname: kname, Value: value}
+	e = &Element[string, enc.Name, V]{Kstr: kstr, Kname: kname, Val: val}
 	om.ll.Insert(e, func(e1, e2 *Element[string, enc.Name, V]) bool {
 		return e1.Kname.Compare(e2.Kname) != 1
 	})
-	om.kv[kstring] = e
+	om.kv[kstr] = e
 	return false
 }
 
-func (om *OrderedMap[V]) setLatestEntriesFirst(kstring string, kname enc.Name, value V, old bool) bool {
-	e, ok := om.kv[kstring]
+func (om *OrderedMap[V]) setLatestEntriesFirst(kstr string, kname enc.Name, val V, old bool) bool {
+	e, ok := om.kv[kstr]
 	if ok {
-		e.Value = value
+		e.Val = val
 		if !old {
 			om.ll.MoveToFront(e)
 		}
 		return true
 	}
-	e = &Element[string, enc.Name, V]{Kstring: kstring, Kname: kname, Value: value}
+	e = &Element[string, enc.Name, V]{Kstr: kstr, Kname: kname, Val: val}
 	if old {
 		om.ll.PushBack(e)
 	} else {
 		om.ll.PushFront(e)
 	}
-	om.kv[kstring] = e
+	om.kv[kstr] = e
 	return false
 }

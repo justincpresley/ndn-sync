@@ -100,28 +100,28 @@ func (c *twoStateCore) Shutdown() {
 	c.logger.Info("Core Shutdown.")
 }
 
-func (c *twoStateCore) Update(dataset enc.Name, seqno uint64) {
+func (c *twoStateCore) Update(dsname enc.Name, seqno uint64) {
 	if seqno == 0 {
 		c.logger.Warn("The Core was updated with a seqno of 0.")
 		return
 	}
-	datasetStr := dataset.String()
-	if seqno <= c.local.Get(datasetStr) {
+	dsstr := dsname.String()
+	if seqno <= c.local.Get(dsstr) {
 		c.logger.Warn("The Core was updated with a non-new seqno.")
 		return
 	}
-	if c.local.Get(datasetStr) == 0 {
-		c.selfsets = append(c.selfsets, datasetStr)
+	if c.local.Get(dsstr) == 0 {
+		c.selfsets = append(c.selfsets, dsstr)
 	} else {
-		if !slices.Contains(c.selfsets, datasetStr) {
+		if !slices.Contains(c.selfsets, dsstr) {
 			c.logger.Warn("The Core was updated with a dataset not previously updated by the node.")
 			return
 		}
 	}
 	c.localMtx.Lock()
-	c.local.Set(datasetStr, dataset, seqno, false)
+	c.local.Set(dsstr, dsname, seqno, false)
 	c.localMtx.Unlock()
-	c.updateTimes[datasetStr] = time.Now()
+	c.updateTimes[dsstr] = time.Now()
 	c.scheduler.Skip()
 }
 
@@ -162,7 +162,7 @@ func (c *twoStateCore) onTimer() {
 	} else {
 		c.recordMtx.Lock()
 		defer c.recordMtx.Unlock()
-		localNewer := c.mergeRecordToLocal(c.record)
+		localNewer := c.mergeRecordToLocal()
 		if localNewer {
 			c.sendInterest()
 		}
@@ -198,18 +198,18 @@ func (c *twoStateCore) sendInterest() {
 func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
-		temp    uint64
+		lVal    uint64
 		isNewer bool
 	)
 	c.localMtx.Lock()
-	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.local.Get(pair.Kstring)
-		if temp < pair.Value {
-			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
-			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
-			c.updateTimes[pair.Kstring] = time.Now()
-		} else if !slices.Contains(c.selfsets, pair.Kstring) && temp > pair.Value {
-			if !c.effSuppress || time.Since(c.updateTimes[pair.Kstring]) >= c.constants.BriefInterval {
+	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
+		lVal = c.local.Get(p.Kstr)
+		if lVal < p.Val {
+			missing = append(missing, NewMissingData(p.Kname, lVal+1, p.Val))
+			c.local.Set(p.Kstr, p.Kname, p.Val, false)
+			c.updateTimes[p.Kstr] = time.Now()
+		} else if !slices.Contains(c.selfsets, p.Kstr) && lVal > p.Val {
+			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.BriefInterval {
 				isNewer = true
 			}
 		}
@@ -229,17 +229,18 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 func (c *twoStateCore) recordVector(vector StateVector) {
 	var (
 		missing = make(SyncUpdate, 0)
-		temp    uint64
+		lVal    uint64
 	)
 	c.recordMtx.Lock()
-	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		if c.record.Get(pair.Kstring) < pair.Value {
-			c.record.Set(pair.Kstring, pair.Kname, pair.Value, true)
+	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
+		lVal = c.local.Get(p.Kstr)
+		if c.record.Get(p.Kstr) < p.Val {
+			c.record.Set(p.Kstr, p.Kname, p.Val, true)
 		}
-		if c.local.Get(pair.Kstring) < pair.Value {
-			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
-			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
-			c.updateTimes[pair.Kstring] = time.Now()
+		if lVal < p.Val {
+			missing = append(missing, NewMissingData(p.Kname, lVal+1, p.Val))
+			c.local.Set(p.Kstr, p.Kname, p.Val, false)
+			c.updateTimes[p.Kstr] = time.Now()
 		}
 	}
 	c.recordMtx.Unlock()
@@ -250,17 +251,17 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 	}
 }
 
-func (c *twoStateCore) mergeRecordToLocal(vector StateVector) bool {
+func (c *twoStateCore) mergeRecordToLocal() bool {
 	var isNewer bool
 	c.localMtx.Lock()
-	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		if c.local.Get(pair.Kstring) > pair.Value && !slices.Contains(c.selfsets, pair.Kstring) {
-			if !c.effSuppress || time.Since(c.updateTimes[pair.Kstring]) >= c.constants.BriefInterval {
+	for p := c.record.Entries().Back(); p != nil; p = p.Prev() {
+		if c.local.Get(p.Kstr) > p.Val && !slices.Contains(c.selfsets, p.Kstr) {
+			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.BriefInterval {
 				isNewer = true
 			}
 		}
 	}
-	if vector.Len() < c.local.Len() {
+	if c.record.Len() < c.local.Len() {
 		isNewer = true
 	}
 	c.localMtx.Unlock()

@@ -172,11 +172,11 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	)
 	c.localMtx.Lock()
 	for pair := vector.Entries().Back(); pair != nil; pair = pair.Prev() {
-		temp = c.local.Get(pair.Kstring)
-		if temp < pair.Value {
-			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Value))
-			c.local.Set(pair.Kstring, pair.Kname, pair.Value, false)
-		} else if !slices.Contains(c.selfsets, pair.Kstring) && temp > pair.Value {
+		temp = c.local.Get(pair.Kstr)
+		if temp < pair.Val {
+			missing = append(missing, NewMissingData(pair.Kname, temp+1, pair.Val))
+			c.local.Set(pair.Kstr, pair.Kname, pair.Val, false)
+		} else if !slices.Contains(c.selfsets, pair.Kstr) && temp > pair.Val {
 			isNewer = true
 		}
 	}

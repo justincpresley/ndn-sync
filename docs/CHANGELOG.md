@@ -5,6 +5,14 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+## Added
+- `EfficientSuppression` option for SVS `TwoStateCore`. Found by @seijiotsu, this option ignores out-of-date Sync Interests within the network RTT which dramatically reduces the number of suppressions. With extremely sparse SVS networks, this option might incorporate delay. More on this is documented [here](https://github.com/named-data/ndn-svs/issues/25) and will later be added to the Spec.
+
+## Changed
+- Internal naming of variables and functions have been changed for clarity.
+
+## Fixed
+- While a SVS `Core` is in `Suppression`, Incoming `StateVector`s are handled much more efficiently. Only loops through the `StateVector` entries once instead of twice.
 
 ## [v0.0.0-alpha.13] - 2024-02-09
 ## Added
