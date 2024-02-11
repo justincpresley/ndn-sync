@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 ## Added
-- `EfficientSuppression` option for SVS `TwoStateCore`. Found by @seijiotsu, this option ignores out-of-date Sync Interests within the network RTT which dramatically reduces the number of suppressions. With extremely sparse SVS networks, this option might incorporate delay. More on this is documented [here](https://github.com/named-data/ndn-svs/issues/25) and will later be added to the Spec.
+- `EfficientSuppression` option for SVS `TwoStateCore`. Found by **@seijiotsu**, this option ignores out-of-date Sync Interests within the network RTT which dramatically reduces the number of suppressions. With extremely sparse SVS networks, this option might incorporate delay. More on this is documented [here](https://github.com/named-data/ndn-svs/issues/25) and will later be added to the Spec.
 
 ## Changed
 - Internal naming of variables and functions have been changed for clarity.
