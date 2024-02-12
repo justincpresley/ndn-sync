@@ -5,6 +5,8 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.14] - 2024-02-12
 ## Added
 - `EfficientSuppression` option for SVS `TwoStateCore`. Found by **@seijiotsu**, this option ignores out-of-date Sync Interests within the network RTT which dramatically reduces the number of suppressions. With extremely sparse SVS networks, this option might incorporate delay. More on this is documented [here](https://github.com/named-data/ndn-svs/issues/25) and will later be added to the Spec.
 
@@ -153,7 +155,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.13...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.14...HEAD
+[v0.0.0-alpha.14]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.13...v0.0.0-alpha.14
 [v0.0.0-alpha.13]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...v0.0.0-alpha.13
 [v0.0.0-alpha.12]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.11...v0.0.0-alpha.12
 [v0.0.0-alpha.11]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.10...v0.0.0-alpha.11
