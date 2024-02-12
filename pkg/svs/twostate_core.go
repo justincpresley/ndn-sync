@@ -161,13 +161,13 @@ func (c *twoStateCore) onTimer() {
 		c.sendInterest()
 	} else {
 		c.recordMtx.Lock()
-		defer c.recordMtx.Unlock()
 		localNewer := c.mergeRecordToLocal()
+		c.record = NewStateVector()
+		c.recordMtx.Unlock()
+		atomic.StoreInt32(c.state, steadyState)
 		if localNewer {
 			c.sendInterest()
 		}
-		atomic.StoreInt32(c.state, steadyState)
-		c.record = NewStateVector()
 	}
 }
 

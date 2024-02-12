@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Reuse of a variable during `StateVector` encoding.
 
 ## Fixed
-- While a SVS `Core` is in `Suppression`, Incoming `StateVector`s are handled much more efficiently. Only loops through the `StateVector` entries once instead of twice.
+- Removed many small inefficiencies in SVS `Core` logic. Operations were found unnecessary in both `Suppression` and `Steady` states.
 
 ## [v0.0.0-alpha.13] - 2024-02-09
 ## Added
