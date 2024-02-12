@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Fixed
 - Slight refactor of SVS `Scheduler`, found that it was incorporating jitter wrong.
+- SVS `CoreConfig` giving the appropriate `Core` type.
 
 ## [v0.0.0-alpha.13] - 2024-02-09
 ## Added
