@@ -28,23 +28,25 @@ type Scheduler interface {
 }
 
 type scheduler struct {
-	function   func()
-	interval   time.Duration
-	randomness float32
-	actions    chan action
-	timer      *time.Timer
-	cycleTime  int64
-	startTime  int64
-	mtx        sync.Mutex
-	done       chan struct{}
+	function    func()
+	minInterval int64
+	maxInterval int64
+	actions     chan action
+	timer       *time.Timer
+	cycleTime   int64
+	startTime   int64
+	mtx         sync.Mutex
+	done        chan struct{}
 }
 
 func NewScheduler(function func(), interval time.Duration, randomness float32) Scheduler {
+	m := interval.Milliseconds()
+	v := int64(float32(m) * randomness)
 	return &scheduler{
-		function:   function,
-		interval:   interval,
-		randomness: randomness,
-		actions:    make(chan action, 3),
+		function:    function,
+		actions:     make(chan action, 3),
+		minInterval: (m - v) * 1000000,
+		maxInterval: (m + v) * 1000000,
 	}
 }
 
@@ -75,28 +77,18 @@ func (s *scheduler) target(execute bool) {
 	if execute {
 		s.function()
 	}
-	temp := AddRandomness(s.interval, s.randomness)
+	temp := BoundedRand(s.minInterval, s.maxInterval)
 	s.mtx.Lock()
 	s.startTime = time.Now().UnixNano()
-	s.cycleTime = int64(temp)
+	s.cycleTime = temp
 	s.mtx.Unlock()
-	s.timer = time.NewTimer(temp)
+	s.timer = time.NewTimer(time.Duration(temp))
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
-			temp = AddRandomness(s.interval, s.randomness)
-			s.mtx.Lock()
-			s.startTime = time.Now().UnixNano()
-			s.cycleTime = int64(temp)
-			s.mtx.Unlock()
-			if !s.timer.Stop() {
-				select {
-				case <-s.timer.C:
-				default:
-				}
-			}
-			s.timer.Reset(temp)
+			temp = BoundedRand(s.minInterval, s.maxInterval)
+			s.resetTimer(temp)
 		case a := <-s.actions:
 			switch a.typ {
 			case actionStop:
@@ -111,37 +103,30 @@ func (s *scheduler) target(execute bool) {
 				s.function()
 				fallthrough
 			case actionReset:
-				temp = AddRandomness(s.interval, s.randomness)
-				s.mtx.Lock()
-				s.startTime = time.Now().UnixNano()
-				s.cycleTime = int64(temp)
-				s.mtx.Unlock()
-				if !s.timer.Stop() {
-					select {
-					case <-s.timer.C:
-					default:
-					}
-				}
-				s.timer.Reset(temp)
+				temp = BoundedRand(s.minInterval, s.maxInterval)
+				s.resetTimer(temp)
 			case actionSet:
-				s.mtx.Lock()
-				s.startTime = time.Now().UnixNano()
-				s.cycleTime = a.val
-				s.mtx.Unlock()
-				if !s.timer.Stop() {
-					select {
-					case <-s.timer.C:
-					default:
-					}
-				}
-				s.timer.Reset(time.Duration(a.val))
+				s.resetTimer(a.val)
 			default:
 			}
 		}
 	}
 }
 
-func AddRandomness(value time.Duration, randomness float32) time.Duration {
-	r := rand.Intn(int(float32(value) * randomness))
-	return value + time.Duration(r)
+func (s *scheduler) resetTimer(val int64) {
+	s.mtx.Lock()
+	s.startTime = time.Now().UnixNano()
+	s.cycleTime = val
+	s.mtx.Unlock()
+	if !s.timer.Stop() {
+		select {
+		case <-s.timer.C:
+		default:
+		}
+	}
+	s.timer.Reset(time.Duration(val))
+}
+
+func BoundedRand(min, max int64) int64 {
+	return min + rand.Int63n(max-min+1)
 }

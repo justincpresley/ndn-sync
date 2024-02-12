@@ -55,7 +55,7 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		formal:      config.FormalEncoding,
 		effSuppress: config.EfficientSuppression,
 	}
-	c.scheduler = NewScheduler(c.onTimer, constants.Interval, constants.IntervalRandomness)
+	c.scheduler = NewScheduler(c.onTimer, constants.SyncInterval, constants.SyncIntervalJitter)
 	return c
 }
 
@@ -133,6 +133,12 @@ func (c *twoStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire,
 	c.onInterest(interest, rawInterest, sigCovered, reply, deadline)
 }
 
+func (c *twoStateCore) Subscribe() chan SyncUpdate {
+	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
+	c.subs = append(c.subs, ch)
+	return ch
+}
+
 func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	// TODO: VERIFY THE INTEREST
 	remote, err := ParseStateVector(enc.NewWireReader(interest.AppParam()), c.formal)
@@ -149,7 +155,7 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		c.scheduler.Reset()
 	} else {
 		atomic.StoreInt32(c.state, suppressionState)
-		delay := AddRandomness(c.constants.BriefInterval, c.constants.BriefIntervalRandomness)
+		delay := suppressionDelay(c.constants.SuppressionInterval, c.constants.SuppressionIntervalJitter)
 		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
 		}
@@ -209,7 +215,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
 			c.updateTimes[p.Kstr] = time.Now()
 		} else if !slices.Contains(c.selfsets, p.Kstr) && lVal > p.Val {
-			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.BriefInterval {
+			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.SuppressionInterval {
 				isNewer = true
 			}
 		}
@@ -256,7 +262,7 @@ func (c *twoStateCore) mergeRecordToLocal() bool {
 	c.localMtx.Lock()
 	for p := c.record.Entries().Back(); p != nil; p = p.Prev() {
 		if c.local.Get(p.Kstr) > p.Val && !slices.Contains(c.selfsets, p.Kstr) {
-			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.BriefInterval {
+			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.SuppressionInterval {
 				isNewer = true
 			}
 		}
@@ -268,8 +274,8 @@ func (c *twoStateCore) mergeRecordToLocal() bool {
 	return isNewer
 }
 
-func (c *twoStateCore) Subscribe() chan SyncUpdate {
-	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
-	c.subs = append(c.subs, ch)
-	return ch
+func suppressionDelay(val time.Duration, jitter float32) time.Duration {
+	m := val.Milliseconds()
+	v := int64(float32(m) * jitter)
+	return time.Duration(BoundedRand((m-v)*1000000, (m+v)*1000000))
 }

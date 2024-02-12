@@ -45,7 +45,7 @@ func newOneStateCore(app *eng.Engine, config *OneStateCoreConfig, constants *Con
 		},
 		formal: config.FormalEncoding,
 	}
-	c.scheduler = NewScheduler(c.sendInterest, constants.Interval, constants.IntervalRandomness)
+	c.scheduler = NewScheduler(c.sendInterest, constants.SyncInterval, constants.SyncIntervalJitter)
 	return c
 }
 

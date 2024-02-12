@@ -9,11 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `EfficientSuppression` option for SVS `TwoStateCore`. Found by **@seijiotsu**, this option ignores out-of-date Sync Interests within the network RTT which dramatically reduces the number of suppressions. With extremely sparse SVS networks, this option might incorporate delay. More on this is documented [here](https://github.com/named-data/ndn-svs/issues/25) and will later be added to the Spec.
 
 ## Changed
+- Slight refactor of SVS `Core`. Removed many small inefficiencies in its logic. Operations were found unnecessary in both `Suppression` and `Steady` states.
 - Internal naming of variables and functions have been changed for clarity.
 - Reuse of a variable during `StateVector` encoding.
 
 ## Fixed
-- Removed many small inefficiencies in SVS `Core` logic. Operations were found unnecessary in both `Suppression` and `Steady` states.
+- Slight refactor of SVS `Scheduler`, found that it was incorporating jitter wrong.
 
 ## [v0.0.0-alpha.13] - 2024-02-09
 ## Added
