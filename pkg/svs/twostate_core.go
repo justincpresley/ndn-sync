@@ -125,18 +125,18 @@ func (c *twoStateCore) Update(dsname enc.Name, seqno uint64) {
 	c.scheduler.Skip()
 }
 
+func (c *twoStateCore) Subscribe() chan SyncUpdate {
+	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
+	c.subs = append(c.subs, ch)
+	return ch
+}
+
 func (c *twoStateCore) StateVector() StateVector {
 	return c.local
 }
 
 func (c *twoStateCore) FeedInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {
 	c.onInterest(interest, rawInterest, sigCovered, reply, deadline)
-}
-
-func (c *twoStateCore) Subscribe() chan SyncUpdate {
-	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
-	c.subs = append(c.subs, ch)
-	return ch
 }
 
 func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, sigCovered enc.Wire, reply ndn.ReplyFunc, deadline time.Time) {

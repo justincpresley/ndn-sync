@@ -114,6 +114,12 @@ func (c *oneStateCore) Update(dsname enc.Name, seqno uint64) {
 	c.scheduler.Skip()
 }
 
+func (c *oneStateCore) Subscribe() chan SyncUpdate {
+	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
+	c.subs = append(c.subs, ch)
+	return ch
+}
+
 func (c *oneStateCore) StateVector() StateVector {
 	return c.local
 }
@@ -187,10 +193,4 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 		}
 	}
 	return isNewer
-}
-
-func (c *oneStateCore) Subscribe() chan SyncUpdate {
-	ch := make(chan SyncUpdate, c.constants.InitialMissingChannelSize)
-	c.subs = append(c.subs, ch)
-	return ch
 }

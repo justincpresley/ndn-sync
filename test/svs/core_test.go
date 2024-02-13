@@ -11,8 +11,7 @@ import (
 func TestCoreInitialState(t *testing.T) {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	config := &svs.TwoStateCoreConfig{
-		SyncPrefix:     syncPrefix,
-		FormalEncoding: false,
+		SyncPrefix: syncPrefix,
 	}
 	core := svs.NewCore(nil, config, svs.GetDefaultConstants())
 	assert.Equal(t, svs.NewStateVector(), core.StateVector())

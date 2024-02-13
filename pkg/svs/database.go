@@ -54,10 +54,10 @@ func (fs BoltDB) Get(key []byte) (val []byte) {
 	return val
 }
 
-func (fs BoltDB) Set(key []byte, value []byte) error {
+func (fs BoltDB) Set(key []byte, val []byte) error {
 	return fs.handle.Update(func(tx *bolt.Tx) error {
 		buc := tx.Bucket(fs.bucket)
-		return buc.Put(key, value)
+		return buc.Put(key, val)
 	})
 }
 

@@ -31,7 +31,6 @@ func newHealthSync(app *eng.Engine, config *HealthConfig, constants *Constants) 
 	logger := log.WithField("module", "svs")
 	syncPrefix := append(config.GroupPrefix, constants.SyncComponent)
 
-	// TODO: switch to new core type (check then switch)
 	coreConfig := &TwoStateCoreConfig{
 		SyncPrefix:           syncPrefix,
 		FormalEncoding:       config.FormalEncoding,

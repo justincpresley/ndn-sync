@@ -5,6 +5,10 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+## Changed
+- Reorganized functions to match interface method order.
+- Changed naming of a constant variable to be more consistent with others that function the same.
+- Moved to go 1.22, updated all dependencies.
 
 ## [v0.0.0-alpha.14] - 2024-02-12
 ## Added

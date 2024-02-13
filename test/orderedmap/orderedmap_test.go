@@ -13,7 +13,7 @@ func TestBasicFeatures(t *testing.T) {
 	n := 100
 	m := om.New[int](om.LatestEntriesFirst)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.Equal(t, i, m.Len())
 		n, _ := enc.NameFromStr(strconv.Itoa(i))
 		present := m.Set(strconv.Itoa(i), n, 2*i, om.MetaV{Old: true})
@@ -21,13 +21,13 @@ func TestBasicFeatures(t *testing.T) {
 		assert.False(t, present)
 	}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		value, present := m.Get(strconv.Itoa(i))
 		assert.Equal(t, 2*i, value)
 		assert.True(t, present)
 	}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		e := m.GetElement(strconv.Itoa(i))
 		assert.NotNil(t, e)
 		assert.Equal(t, 2*i, e.Val)

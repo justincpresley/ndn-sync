@@ -18,7 +18,7 @@ type Constants struct {
 	DataComponent                  enc.Component
 	SyncComponent                  enc.Component
 	MaxConcurrentDataInterests     int32 // 0 = inf
-	InitialFetchQueueLength        uint  // only helps to mitigate allocation resizing
+	InitialFetchQueueSize          uint  // only helps to mitigate allocation resizing
 	InitialMissingChannelSize      uint  // only helps to mitigate allocation resizing
 	InitialStatusChangeChannelSize uint  // only helps to mitigate allocation resizing
 	HeartbeatsToRenew              uint
@@ -47,7 +47,7 @@ func GetDefaultConstants() *Constants {
 			Val: []byte{115, 121, 110, 99},
 		},
 		MaxConcurrentDataInterests:     10,
-		InitialFetchQueueLength:        50,
+		InitialFetchQueueSize:          50,
 		InitialMissingChannelSize:      5,
 		InitialStatusChangeChannelSize: 5,
 		HeartbeatsToRenew:              3,

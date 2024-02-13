@@ -80,7 +80,7 @@ func newSharedSync(app *eng.Engine, config *SharedConfig, constants *Constants) 
 		},
 		logger:     logger,
 		dataCall:   config.DataCallback,
-		fetchQueue: make(chan *sharedFetchItem, constants.InitialFetchQueueLength),
+		fetchQueue: make(chan *sharedFetchItem, constants.InitialFetchQueueSize),
 		numFetches: new(int32),
 	}
 	s.missChan = s.core.Subscribe()

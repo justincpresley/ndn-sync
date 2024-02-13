@@ -79,7 +79,7 @@ func newNativeSync(app *eng.Engine, config *NativeConfig, constants *Constants) 
 		},
 		logger:     logger,
 		dataCall:   config.DataCallback,
-		fetchQueue: make(chan *nativeFetchItem, constants.InitialFetchQueueLength),
+		fetchQueue: make(chan *nativeFetchItem, constants.InitialFetchQueueSize),
 		numFetches: new(int32),
 	}
 	s.missChan = s.core.Subscribe()
