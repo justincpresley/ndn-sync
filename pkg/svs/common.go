@@ -41,3 +41,15 @@ const (
 	suppressionState
 	shakingState
 )
+
+type MissingData struct {
+	Dataset enc.Name
+	LowSeq  uint64
+	HighSeq uint64
+}
+
+type StatusChange struct {
+	Node      string
+	OldStatus Status
+	NewStatus Status
+}

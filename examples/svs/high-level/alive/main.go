@@ -60,12 +60,12 @@ loopCount:
 	for {
 		select {
 		case change := <-recv:
-			if change.OldStatus() == svs.Unseen {
-				fmt.Printf("%s is heard.\n", change.Source())
-			} else if change.OldStatus() == svs.Expired {
-				fmt.Printf("%s renewed.\n", change.Source())
+			if change.OldStatus == svs.Unseen {
+				fmt.Printf("%s is heard.\n", change.Node)
+			} else if change.OldStatus == svs.Expired {
+				fmt.Printf("%s renewed.\n", change.Node)
 			} else {
-				fmt.Printf("%s expired.\n", change.Source())
+				fmt.Printf("%s expired.\n", change.Node)
 			}
 		case <-sigChannel:
 			logger.Infof("Received signal %+v - exiting.", sigChannel)

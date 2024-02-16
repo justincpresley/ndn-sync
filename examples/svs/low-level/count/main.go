@@ -54,13 +54,14 @@ func main() {
 	syncPrefix, _ := enc.NameFromStr("/svs")
 	nid, _ := enc.NameFromStr(*source)
 	config := &svs.NativeConfig{
-		Source:         nid,
-		GroupPrefix:    syncPrefix,
-		NamingScheme:   svs.SourceOrientedNaming,
-		StoragePath:    "./" + *source + "_bolt.db",
-		DataCallback:   dataCall,
-		HandlingOption: svs.NoHandling,
-		FormalEncoding: false,
+		Source:               nid,
+		GroupPrefix:          syncPrefix,
+		NamingScheme:         svs.SourceOrientedNaming,
+		StoragePath:          "./" + *source + "_bolt.db",
+		DataCallback:         dataCall,
+		HandlingOption:       svs.NoHandling,
+		FormalEncoding:       false,
+		EfficientSuppression: true,
 	}
 	sync := svs.NewNativeSync(app, config, svs.GetDefaultConstants())
 
@@ -87,9 +88,9 @@ loopCount:
 			num++
 		case missing := <-recv:
 			for _, m := range missing {
-				for m.LowSeqno() <= m.HighSeqno() {
-					sync.NeedData(m.Source(), m.LowSeqno())
-					m.Increment()
+				for m.LowSeq <= m.HighSeq {
+					sync.NeedData(m.Dataset, m.LowSeq)
+					m.LowSeq++
 				}
 			}
 		case <-sigChannel:

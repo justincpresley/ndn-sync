@@ -273,9 +273,9 @@ func (s *nativeSync) newSourceCentricHandling(data *nativeHandlerData) {
 					return
 				}
 				for _, m := range missing {
-					for m.LowSeqno() <= m.HighSeqno() {
-						s.NeedData(m.Source(), m.LowSeqno())
-						m.Increment()
+					for m.LowSeq <= m.HighSeq {
+						s.NeedData(m.Dataset, m.LowSeq)
+						m.LowSeq++
 					}
 				}
 			}
@@ -296,9 +296,9 @@ func (s *nativeSync) newEqualTrafficHandling(data *nativeHandlerData) {
 				for {
 					allFetched = true
 					for _, m := range missing {
-						if m.LowSeqno() <= m.HighSeqno() {
-							s.NeedData(m.Source(), m.LowSeqno())
-							m.Increment()
+						if m.LowSeq <= m.HighSeq {
+							s.NeedData(m.Dataset, m.LowSeq)
+							m.LowSeq++
 							allFetched = false
 						}
 					}

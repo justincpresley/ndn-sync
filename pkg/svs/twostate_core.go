@@ -211,7 +211,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
 		lVal = c.local.Get(p.Kstr)
 		if lVal < p.Val {
-			missing = append(missing, NewMissingData(p.Kname, lVal+1, p.Val))
+			missing = append(missing, MissingData{Dataset: p.Kname, LowSeq: lVal + 1, HighSeq: p.Val})
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
 			c.updateTimes[p.Kstr] = time.Now()
 		} else if !slices.Contains(c.selfsets, p.Kstr) && lVal > p.Val {
@@ -244,7 +244,7 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 			c.record.Set(p.Kstr, p.Kname, p.Val, true)
 		}
 		if lVal < p.Val {
-			missing = append(missing, NewMissingData(p.Kname, lVal+1, p.Val))
+			missing = append(missing, MissingData{Dataset: p.Kname, LowSeq: lVal + 1, HighSeq: p.Val})
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
 			c.updateTimes[p.Kstr] = time.Now()
 		}

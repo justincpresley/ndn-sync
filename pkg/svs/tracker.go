@@ -34,7 +34,7 @@ func NewTracker(src string, cs *Constants) Tracker {
 	hrt := &heart{status: Expired}
 	t.entries.Store(src, hrt)
 	t.selfHrt = hrt
-	t.statChan <- NewStatusChange(src, Unseen, Expired)
+	t.statChan <- StatusChange{Node: src, OldStatus: Unseen, NewStatus: Expired}
 	return t
 }
 
@@ -42,7 +42,7 @@ func (t *tracker) Reset(src string) {
 	hrt, ok := t.entries.Load(src)
 	if !ok {
 		t.entries.Store(src, &heart{status: Expired})
-		t.statChan <- NewStatusChange(src, Unseen, Expired)
+		t.statChan <- StatusChange{Node: src, OldStatus: Unseen, NewStatus: Expired}
 		return
 	}
 	t.resetHeart(src, hrt.(*heart))
@@ -58,7 +58,7 @@ func (t *tracker) resetHeart(src string, hrt *heart) {
 	if hrt.beats >= t.constants.HeartbeatsToRenew {
 		hrt.beats = 0
 		hrt.status = Renewed
-		t.statChan <- NewStatusChange(src, Expired, Renewed)
+		t.statChan <- StatusChange{Node: src, OldStatus: Expired, NewStatus: Renewed}
 	}
 }
 
@@ -84,7 +84,7 @@ func (t *tracker) Detect() {
 				if hrt.beats >= t.constants.HeartbeatsToExpire {
 					hrt.beats = 0
 					hrt.status = Expired
-					t.statChan <- NewStatusChange(src, Renewed, Expired)
+					t.statChan <- StatusChange{Node: src, OldStatus: Renewed, NewStatus: Expired}
 				}
 			}
 		}
