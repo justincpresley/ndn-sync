@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 ## Changed
+- After a SVS `Core` exits `Suppression` state, more efficiently detect if a Sync Interest needs to be sent.
 - De-interface small simple structures: `MissingData` and `StatusChange`.
 - Reorganized functions to match interface method order.
 - Changed naming of a constant variable to be more consistent with others that function the same.

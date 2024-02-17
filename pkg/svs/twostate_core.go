@@ -258,20 +258,19 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 }
 
 func (c *twoStateCore) mergeRecordToLocal() bool {
-	var isNewer bool
 	c.localMtx.Lock()
-	for p := c.record.Entries().Back(); p != nil; p = p.Prev() {
+	defer c.localMtx.Unlock()
+	if c.record.Len() < c.local.Len() {
+		return true
+	}
+	for p := c.record.Entries().Front(); p != nil; p = p.Next() {
 		if c.local.Get(p.Kstr) > p.Val && !slices.Contains(c.selfsets, p.Kstr) {
 			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.SuppressionInterval {
-				isNewer = true
+				return true
 			}
 		}
 	}
-	if c.record.Len() < c.local.Len() {
-		isNewer = true
-	}
-	c.localMtx.Unlock()
-	return isNewer
+	return false
 }
 
 func suppressionDelay(val time.Duration, jitter float32) time.Duration {
