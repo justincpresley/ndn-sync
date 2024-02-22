@@ -220,6 +220,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 			}
 		}
 	}
+	// Recently added datasets are not taken into account when checking length
 	if vector.Len() < c.local.Len() {
 		isNewer = true
 	}
@@ -274,7 +275,5 @@ func (c *twoStateCore) mergeRecordToLocal() bool {
 }
 
 func suppressionDelay(val time.Duration, jitter float32) time.Duration {
-	m := val.Milliseconds()
-	v := int64(float32(m) * jitter)
-	return time.Duration(BoundedRand((m-v)*1000000, (m+v)*1000000))
+	return time.Duration(BoundedRand(JitterToBounds(val, jitter)))
 }

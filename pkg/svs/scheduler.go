@@ -39,14 +39,13 @@ type scheduler struct {
 	done        chan struct{}
 }
 
-func NewScheduler(function func(), interval time.Duration, randomness float32) Scheduler {
-	m := interval.Milliseconds()
-	v := int64(float32(m) * randomness)
+func NewScheduler(function func(), interval time.Duration, jitter float32) Scheduler {
+	min, max := JitterToBounds(interval, jitter)
 	return &scheduler{
 		function:    function,
 		actions:     make(chan action, 3),
-		minInterval: (m - v) * 1000000,
-		maxInterval: (m + v) * 1000000,
+		minInterval: min,
+		maxInterval: max,
 	}
 }
 
@@ -129,4 +128,10 @@ func (s *scheduler) resetTimer(val int64) {
 
 func BoundedRand(min, max int64) int64 {
 	return min + rand.Int63n(max-min+1)
+}
+
+func JitterToBounds(base time.Duration, jitter float32) (int64, int64) {
+	m := base.Milliseconds()
+	v := int64(float32(m) * jitter)
+	return (m - v) * 1000000, (m + v) * 1000000
 }
