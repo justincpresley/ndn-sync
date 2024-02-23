@@ -256,9 +256,9 @@ func (s *sharedSync) newSourceCentricHandling(data *sharedHandlerData) {
 					return
 				}
 				for _, m := range missing {
-					for m.LowSeq <= m.HighSeq {
-						s.NeedData(m.Dataset, m.LowSeq, data.cache)
-						m.LowSeq++
+					for m.StartSeq <= m.EndSeq {
+						s.NeedData(m.Dataset, m.StartSeq, data.cache)
+						m.StartSeq++
 					}
 				}
 			}
@@ -279,9 +279,9 @@ func (s *sharedSync) newEqualTrafficHandling(data *sharedHandlerData) {
 				for {
 					allFetched = true
 					for _, m := range missing {
-						if m.LowSeq <= m.HighSeq {
-							s.NeedData(m.Dataset, m.LowSeq, data.cache)
-							m.LowSeq++
+						if m.StartSeq <= m.EndSeq {
+							s.NeedData(m.Dataset, m.StartSeq, data.cache)
+							m.StartSeq++
 							allFetched = false
 						}
 					}

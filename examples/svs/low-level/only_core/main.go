@@ -76,9 +76,9 @@ loopCount:
 		// Receive code when available
 		case missing := <-recv:
 			for _, m := range missing {
-				for m.LowSeq <= m.HighSeq {
-					fmt.Println(m.Dataset.String() + ": " + strconv.FormatUint(m.LowSeq, 10))
-					m.LowSeq++
+				for m.StartSeq <= m.EndSeq {
+					fmt.Println(m.Dataset.String() + ": " + strconv.FormatUint(m.StartSeq, 10))
+					m.StartSeq++
 				}
 			}
 

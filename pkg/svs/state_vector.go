@@ -13,7 +13,7 @@ type StateVector interface {
 	Get(string) uint64
 	String() string
 	Len() int
-	Total() uint64
+	Sum() uint64
 	Entries() *om.OrderedMap[uint64]
 	Encode(bool) enc.Wire
 }
@@ -67,7 +67,7 @@ func (sv stateVector) Len() int {
 	return sv.entries.Len()
 }
 
-func (sv stateVector) Total() uint64 {
+func (sv stateVector) Sum() uint64 {
 	var ret uint64
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		ret += p.Val

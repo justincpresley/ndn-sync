@@ -55,7 +55,8 @@ func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Con
 		formal:      config.FormalEncoding,
 		effSuppress: config.EfficientSuppression,
 	}
-	c.scheduler = NewScheduler(c.onTimer, constants.SyncInterval, constants.SyncIntervalJitter)
+	c.scheduler = NewScheduler(c.onTimer)
+	c.scheduler.ApplyBounds(JitterToBounds(constants.SyncInterval, constants.SyncIntervalJitter))
 	return c
 }
 
@@ -155,6 +156,9 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		c.scheduler.Reset()
 	} else {
 		atomic.StoreInt32(c.state, suppressionState)
+		c.recordMtx.Lock()
+		c.record = remote
+		c.recordMtx.Unlock()
 		delay := suppressionDelay(c.constants.SuppressionInterval, c.constants.SuppressionIntervalJitter)
 		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
@@ -166,11 +170,8 @@ func (c *twoStateCore) onTimer() {
 	if atomic.LoadInt32(c.state) == steadyState {
 		c.sendInterest()
 	} else {
-		c.recordMtx.Lock()
-		localNewer := c.mergeRecordToLocal()
-		c.record = NewStateVector()
-		c.recordMtx.Unlock()
 		atomic.StoreInt32(c.state, steadyState)
+		localNewer := c.mergeRecordToLocal()
 		if localNewer {
 			c.sendInterest()
 		}
@@ -211,13 +212,14 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
 		lVal = c.local.Get(p.Kstr)
 		if lVal < p.Val {
-			missing = append(missing, MissingData{Dataset: p.Kname, LowSeq: lVal + 1, HighSeq: p.Val})
+			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: lVal + 1, EndSeq: p.Val})
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
 			c.updateTimes[p.Kstr] = time.Now()
-		} else if !slices.Contains(c.selfsets, p.Kstr) && lVal > p.Val {
-			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.SuppressionInterval {
-				isNewer = true
+		} else if lVal > p.Val {
+			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
+				continue
 			}
+			isNewer = true
 		}
 	}
 	// Recently added datasets are not taken into account when checking length
@@ -234,18 +236,14 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 }
 
 func (c *twoStateCore) recordVector(vector StateVector) {
-	var (
-		missing = make(SyncUpdate, 0)
-		lVal    uint64
-	)
+	var missing = make(SyncUpdate, 0)
 	c.recordMtx.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
-		lVal = c.local.Get(p.Kstr)
 		if c.record.Get(p.Kstr) < p.Val {
 			c.record.Set(p.Kstr, p.Kname, p.Val, true)
 		}
-		if lVal < p.Val {
-			missing = append(missing, MissingData{Dataset: p.Kname, LowSeq: lVal + 1, HighSeq: p.Val})
+		if c.local.Get(p.Kstr) < p.Val {
+			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: c.local.Get(p.Kstr) + 1, EndSeq: p.Val})
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
 			c.updateTimes[p.Kstr] = time.Now()
 		}
@@ -260,15 +258,18 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 
 func (c *twoStateCore) mergeRecordToLocal() bool {
 	c.localMtx.Lock()
+	c.recordMtx.Lock()
 	defer c.localMtx.Unlock()
+	defer c.recordMtx.Unlock()
 	if c.record.Len() < c.local.Len() {
 		return true
 	}
 	for p := c.record.Entries().Front(); p != nil; p = p.Next() {
-		if c.local.Get(p.Kstr) > p.Val && !slices.Contains(c.selfsets, p.Kstr) {
-			if !c.effSuppress || time.Since(c.updateTimes[p.Kstr]) >= c.constants.SuppressionInterval {
-				return true
+		if c.local.Get(p.Kstr) > p.Val {
+			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
+				continue
 			}
+			return true
 		}
 	}
 	return false

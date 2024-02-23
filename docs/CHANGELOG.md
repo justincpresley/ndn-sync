@@ -5,11 +5,17 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+## Added
+- `Scheduler` now has `ApplyBounds()` which must be called before `Start()`. This allows you to change the bounds after `Start()` and simplifies `Scheduler` to operate on bounds instead of jitter.
+- `JitterToBounds()` to help operate `Scheduler`.
+
 ## Changed
-- After a SVS `Core` exits `Suppression` state, more efficiently detect if a Sync Interest needs to be sent.
+- After a `Core` exits `Suppression` state, more efficiently detect if a Sync Interest needs to be sent.
 - De-interface small simple structures: `MissingData` and `StatusChange`.
+- When a `Core` enters `Suppression`, set the record to the remote `StateVector` that caused `Suppression`. This greatly reduces storage operations while in `Suppression`.
+- `Core` will enter `Suppression` based on its own datasets given that the dataset was not recently updated.
 - Reorganized functions to match interface method order.
-- Changed naming of a constant variable to be more consistent with others that function the same.
+- Changed naming of a constant variable and `StateVector` function to be more logical.
 - Moved to go 1.22, updated all dependencies.
 
 

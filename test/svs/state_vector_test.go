@@ -22,7 +22,7 @@ func TestStateVectorBasics(t *testing.T) {
 	assert.Equal(t, uint64(62), sv.Get("/node1"))
 	assert.Equal(t, uint64(9), sv.Get("/node2"))
 	assert.Equal(t, uint64(1), sv.Get("/node3"))
-	assert.Equal(t, uint64(72), sv.Total())
+	assert.Equal(t, uint64(72), sv.Sum())
 	assert.Equal(t, int(3), sv.Len())
 }
 
@@ -51,7 +51,7 @@ func TestStateVectorFormalEncodeDecode(t *testing.T) {
 	nsv, _ := svs.ParseStateVector(enc.NewWireReader(wire), true)
 	assert.Equal(t, uint64(1), nsv.Get("/one"))
 	assert.Equal(t, uint64(2), nsv.Get("/two"))
-	assert.Equal(t, uint64(3), nsv.Total())
+	assert.Equal(t, uint64(3), nsv.Sum())
 	assert.Equal(t, int(2), nsv.Len())
 	assert.Equal(t, sv, nsv)
 }
@@ -66,7 +66,7 @@ func TestStateVectorInformalEncodeDecode(t *testing.T) {
 	nsv, _ := svs.ParseStateVector(enc.NewWireReader(wire), false)
 	assert.Equal(t, uint64(1), nsv.Get("/one"))
 	assert.Equal(t, uint64(2), nsv.Get("/two"))
-	assert.Equal(t, uint64(3), nsv.Total())
+	assert.Equal(t, uint64(3), nsv.Sum())
 	assert.Equal(t, int(2), nsv.Len())
 	assert.Equal(t, sv, nsv)
 }
@@ -76,7 +76,7 @@ func TestStateVectorFormalDecodeStatic(t *testing.T) {
 	sv, _ := svs.ParseStateVector(enc.NewWireReader(wire), true)
 	assert.Equal(t, uint64(1), sv.Get("/one"))
 	assert.Equal(t, uint64(2), sv.Get("/two"))
-	assert.Equal(t, uint64(3), sv.Total())
+	assert.Equal(t, uint64(3), sv.Sum())
 	assert.Equal(t, int(2), sv.Len())
 }
 
@@ -85,7 +85,7 @@ func TestStateVectorInformalDecodeStatic(t *testing.T) {
 	sv, _ := svs.ParseStateVector(enc.NewWireReader(wire), false)
 	assert.Equal(t, uint64(1), sv.Get("/one"))
 	assert.Equal(t, uint64(2), sv.Get("/two"))
-	assert.Equal(t, uint64(3), sv.Total())
+	assert.Equal(t, uint64(3), sv.Sum())
 	assert.Equal(t, int(2), sv.Len())
 }
 

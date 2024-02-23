@@ -19,6 +19,7 @@ type oneStateCore struct {
 	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
 	selfsets    []string
+	updateTimes map[string]time.Time
 	local       StateVector
 	scheduler   Scheduler
 	logger      *log.Entry
@@ -31,13 +32,14 @@ type oneStateCore struct {
 
 func newOneStateCore(app *eng.Engine, config *OneStateCoreConfig, constants *Constants) *oneStateCore {
 	c := &oneStateCore{
-		app:        app,
-		constants:  constants,
-		subs:       make([]chan SyncUpdate, 0),
-		syncPrefix: config.SyncPrefix,
-		selfsets:   make([]string, 0),
-		local:      NewStateVector(),
-		logger:     log.WithField("module", "svs"),
+		app:         app,
+		constants:   constants,
+		subs:        make([]chan SyncUpdate, 0),
+		syncPrefix:  config.SyncPrefix,
+		selfsets:    make([]string, 0),
+		updateTimes: make(map[string]time.Time),
+		local:       NewStateVector(),
+		logger:      log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -45,7 +47,8 @@ func newOneStateCore(app *eng.Engine, config *OneStateCoreConfig, constants *Con
 		},
 		formal: config.FormalEncoding,
 	}
-	c.scheduler = NewScheduler(c.sendInterest, constants.SyncInterval, constants.SyncIntervalJitter)
+	c.scheduler = NewScheduler(c.sendInterest)
+	c.scheduler.ApplyBounds(JitterToBounds(constants.SyncInterval, constants.SyncIntervalJitter))
 	return c
 }
 
@@ -111,6 +114,7 @@ func (c *oneStateCore) Update(dsname enc.Name, seqno uint64) {
 	c.localMtx.Lock()
 	c.local.Set(dsstr, dsname, seqno, false)
 	c.localMtx.Unlock()
+	c.updateTimes[dsstr] = time.Now()
 	c.scheduler.Skip()
 }
 
@@ -177,9 +181,12 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
 		lVal = c.local.Get(p.Kstr)
 		if lVal < p.Val {
-			missing = append(missing, MissingData{Dataset: p.Kname, LowSeq: lVal + 1, HighSeq: p.Val})
+			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: lVal + 1, EndSeq: p.Val})
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
-		} else if !slices.Contains(c.selfsets, p.Kstr) && lVal > p.Val {
+		} else if lVal > p.Val {
+			if slices.Contains(c.selfsets, p.Kstr) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
+				continue
+			}
 			isNewer = true
 		}
 	}

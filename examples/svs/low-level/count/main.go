@@ -88,9 +88,9 @@ loopCount:
 			num++
 		case missing := <-recv:
 			for _, m := range missing {
-				for m.LowSeq <= m.HighSeq {
-					sync.NeedData(m.Dataset, m.LowSeq)
-					m.LowSeq++
+				for m.StartSeq <= m.EndSeq {
+					sync.NeedData(m.Dataset, m.StartSeq)
+					m.StartSeq++
 				}
 			}
 		case <-sigChannel:

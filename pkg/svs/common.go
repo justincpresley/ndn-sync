@@ -43,9 +43,9 @@ const (
 )
 
 type MissingData struct {
-	Dataset enc.Name
-	LowSeq  uint64
-	HighSeq uint64
+	Dataset  enc.Name
+	StartSeq uint64
+	EndSeq   uint64
 }
 
 type StatusChange struct {

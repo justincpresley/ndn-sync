@@ -19,6 +19,7 @@ const (
 )
 
 type Scheduler interface {
+	ApplyBounds(int64, int64)
 	Start(bool)
 	Stop()
 	Skip()
@@ -39,14 +40,17 @@ type scheduler struct {
 	done        chan struct{}
 }
 
-func NewScheduler(function func(), interval time.Duration, jitter float32) Scheduler {
-	min, max := JitterToBounds(interval, jitter)
+func NewScheduler(function func()) Scheduler {
 	return &scheduler{
-		function:    function,
-		actions:     make(chan action, 3),
-		minInterval: min,
-		maxInterval: max,
+		function: function,
+		actions:  make(chan action, 3),
 	}
+}
+
+// Must be called before Start()
+func (s *scheduler) ApplyBounds(min, max int64) {
+	s.minInterval = min
+	s.maxInterval = max
 }
 
 func (s *scheduler) Start(execute bool) {
