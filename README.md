@@ -70,5 +70,5 @@ In addition, ***ndn-sync*** has more practical ways to get involved: [Issues](ht
 [3]: https://www.codefactor.io/repository/github/justincpresley/ndn-sync
 [4]: https://go.dev/
 [5]: https://github.com/justincpresley/ndn-sync/releases
-[6]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.14...HEAD
+[6]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.15...HEAD
 [7]: https://en.wikipedia.org/wiki/ISC_license

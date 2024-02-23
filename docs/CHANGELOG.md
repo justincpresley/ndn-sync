@@ -5,6 +5,8 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.15] - 2024-02-23
 ## Added
 - `Scheduler` now has `ApplyBounds()` which must be called before `Start()`. This allows you to change the bounds after `Start()` and simplifies `Scheduler` to operate on bounds instead of jitter.
 - `JitterToBounds()` to help operate `Scheduler`.
@@ -13,11 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - After a `Core` exits `Suppression` state, more efficiently detect if a Sync Interest needs to be sent.
 - De-interface small simple structures: `MissingData` and `StatusChange`.
 - When a `Core` enters `Suppression`, set the record to the remote `StateVector` that caused `Suppression`. This greatly reduces storage operations while in `Suppression`.
-- `Core` will enter `Suppression` based on its own datasets given that the dataset was not recently updated.
 - Reorganized functions to match interface method order.
 - Changed naming of a constant variable and `StateVector` function to be more logical.
 - Moved to go 1.22, updated all dependencies.
 
+## Fixed
+- `Core` will enter `Suppression` based on its own datasets given that the dataset was not recently updated.
 
 ## [v0.0.0-alpha.14] - 2024-02-12
 ## Added
@@ -168,7 +171,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.14...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.15...HEAD
+[v0.0.0-alpha.15]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.14...v0.0.0-alpha.15
 [v0.0.0-alpha.14]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.13...v0.0.0-alpha.14
 [v0.0.0-alpha.13]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...v0.0.0-alpha.13
 [v0.0.0-alpha.12]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.11...v0.0.0-alpha.12
