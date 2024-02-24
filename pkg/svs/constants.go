@@ -9,8 +9,8 @@ import (
 type Constants struct {
 	SyncInterval                   time.Duration
 	SuppressionInterval            time.Duration
-	SyncIntervalJitter             float32 // percentage variance 0.00<=x<=1.00
-	SuppressionIntervalJitter      float32 // percentage variance 0.00<=x<=1.00
+	SyncIntervalJitter             float64 // percentage variance 0.00<=x<=1.00
+	SuppressionIntervalJitter      float64 // percentage variance 0.00<=x<=1.00
 	DataInterestLifeTime           time.Duration
 	DataInterestRetries            uint // 0 = no retry
 	DataPacketFreshness            time.Duration

@@ -275,6 +275,6 @@ func (c *twoStateCore) mergeRecordToLocal() bool {
 	return false
 }
 
-func suppressionDelay(val time.Duration, jitter float32) time.Duration {
-	return time.Duration(BoundedRand(JitterToBounds(val, jitter)))
+func suppressionDelay(val time.Duration, jitter float64) time.Duration {
+	return BoundedRand(JitterToBounds(val, jitter))
 }

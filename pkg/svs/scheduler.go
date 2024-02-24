@@ -1,14 +1,14 @@
 package svs
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"time"
 )
 
 type action struct {
 	typ int
-	val int64
+	val time.Duration
 }
 
 const (
@@ -19,7 +19,7 @@ const (
 )
 
 type Scheduler interface {
-	ApplyBounds(int64, int64)
+	ApplyBounds(time.Duration, time.Duration)
 	Start(bool)
 	Stop()
 	Skip()
@@ -30,12 +30,12 @@ type Scheduler interface {
 
 type scheduler struct {
 	function    func()
-	minInterval int64
-	maxInterval int64
 	actions     chan action
 	timer       *time.Timer
-	cycleTime   int64
-	startTime   int64
+	minInterval time.Duration
+	maxInterval time.Duration
+	cycleLength time.Duration
+	startTime   time.Time
 	mtx         sync.Mutex
 	done        chan struct{}
 }
@@ -48,7 +48,7 @@ func NewScheduler(function func()) Scheduler {
 }
 
 // Must be called before Start()
-func (s *scheduler) ApplyBounds(min, max int64) {
+func (s *scheduler) ApplyBounds(min, max time.Duration) {
 	s.minInterval = min
 	s.maxInterval = max
 }
@@ -65,14 +65,12 @@ func (s *scheduler) Stop() {
 
 func (s *scheduler) Skip()               { s.actions <- action{typ: actionSkip} }
 func (s *scheduler) Reset()              { s.actions <- action{typ: actionReset} }
-func (s *scheduler) Set(v time.Duration) { s.actions <- action{typ: actionSet, val: int64(v)} }
+func (s *scheduler) Set(v time.Duration) { s.actions <- action{typ: actionSet, val: v} }
 
 func (s *scheduler) TimeLeft() time.Duration {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	// total interval time - time that has past = time left
-	return time.Duration(s.cycleTime) -
-		time.Since(time.Unix(0, s.startTime))
+	return time.Duration(s.cycleLength) - time.Since(s.startTime)
 }
 
 func (s *scheduler) target(execute bool) {
@@ -80,18 +78,12 @@ func (s *scheduler) target(execute bool) {
 	if execute {
 		s.function()
 	}
-	temp := BoundedRand(s.minInterval, s.maxInterval)
-	s.mtx.Lock()
-	s.startTime = time.Now().UnixNano()
-	s.cycleTime = temp
-	s.mtx.Unlock()
-	s.timer = time.NewTimer(time.Duration(temp))
+	s.newTimer()
 	for {
 		select {
 		case <-s.timer.C:
 			s.function()
-			temp = BoundedRand(s.minInterval, s.maxInterval)
-			s.resetTimer(temp)
+			s.resetTimer(BoundedRand(s.minInterval, s.maxInterval))
 		case a := <-s.actions:
 			switch a.typ {
 			case actionStop:
@@ -106,8 +98,7 @@ func (s *scheduler) target(execute bool) {
 				s.function()
 				fallthrough
 			case actionReset:
-				temp = BoundedRand(s.minInterval, s.maxInterval)
-				s.resetTimer(temp)
+				s.resetTimer(BoundedRand(s.minInterval, s.maxInterval))
 			case actionSet:
 				s.resetTimer(a.val)
 			default:
@@ -116,10 +107,19 @@ func (s *scheduler) target(execute bool) {
 	}
 }
 
-func (s *scheduler) resetTimer(val int64) {
+func (s *scheduler) newTimer() {
+	r := BoundedRand(s.minInterval, s.maxInterval)
 	s.mtx.Lock()
-	s.startTime = time.Now().UnixNano()
-	s.cycleTime = val
+	s.startTime = time.Now()
+	s.cycleLength = r
+	s.mtx.Unlock()
+	s.timer = time.NewTimer(r)
+}
+
+func (s *scheduler) resetTimer(val time.Duration) {
+	s.mtx.Lock()
+	s.startTime = time.Now()
+	s.cycleLength = val
 	s.mtx.Unlock()
 	if !s.timer.Stop() {
 		select {
@@ -127,15 +127,14 @@ func (s *scheduler) resetTimer(val int64) {
 		default:
 		}
 	}
-	s.timer.Reset(time.Duration(val))
+	s.timer.Reset(val)
 }
 
-func BoundedRand(min, max int64) int64 {
-	return min + rand.Int63n(max-min+1)
+func BoundedRand(min, max time.Duration) time.Duration {
+	return min + rand.N(max-min+1)
 }
 
-func JitterToBounds(base time.Duration, jitter float32) (int64, int64) {
-	m := base.Milliseconds()
-	v := int64(float32(m) * jitter)
-	return (m - v) * 1000000, (m + v) * 1000000
+func JitterToBounds(base time.Duration, jitter float64) (time.Duration, time.Duration) {
+	v := time.Duration(float64(base) * jitter)
+	return base - v, base + v
 }

@@ -5,6 +5,8 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+## Changed
+- `Scheduler` operates entirely with `time.Duration` instead of `int64` internally. This removes many type conversions and makes it more readable. (made possible with `math/rand/v2`)
 
 ## [v0.0.0-alpha.15] - 2024-02-23
 ## Added
