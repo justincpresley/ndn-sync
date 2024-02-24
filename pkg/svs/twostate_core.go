@@ -167,15 +167,13 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 }
 
 func (c *twoStateCore) onTimer() {
-	if atomic.LoadInt32(c.state) == steadyState {
-		c.sendInterest()
-	} else {
+	if atomic.LoadInt32(c.state) == suppressionState {
 		atomic.StoreInt32(c.state, steadyState)
-		localNewer := c.mergeRecordToLocal()
-		if localNewer {
-			c.sendInterest()
+		if !c.isInterestNeeded() {
+			return
 		}
 	}
+	c.sendInterest()
 }
 
 func (c *twoStateCore) sendInterest() {
@@ -206,7 +204,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		lVal    uint64
-		isNewer bool
+		lNewer bool
 	)
 	c.localMtx.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
@@ -219,12 +217,12 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
 				continue
 			}
-			isNewer = true
+			lNewer = true
 		}
 	}
 	// Recently added datasets are not taken into account when checking length
 	if vector.Len() < c.local.Len() {
-		isNewer = true
+		lNewer = true
 	}
 	c.localMtx.Unlock()
 	if len(missing) != 0 {
@@ -232,7 +230,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 			sub <- missing
 		}
 	}
-	return isNewer
+	return lNewer
 }
 
 func (c *twoStateCore) recordVector(vector StateVector) {
@@ -256,7 +254,7 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 	}
 }
 
-func (c *twoStateCore) mergeRecordToLocal() bool {
+func (c *twoStateCore) isInterestNeeded() bool {
 	c.localMtx.Lock()
 	c.recordMtx.Lock()
 	defer c.localMtx.Unlock()

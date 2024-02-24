@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 ## Changed
 - `Scheduler` operates entirely with `time.Duration` instead of `int64` internally. This removes many type conversions and makes it more readable. (made possible with `math/rand/v2`)
+- Changed logic of `OnTimer` function within `Core` to read better.
 
 ## [v0.0.0-alpha.15] - 2024-02-23
 ## Added
