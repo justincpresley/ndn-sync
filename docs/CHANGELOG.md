@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `Scheduler` operates entirely with `time.Duration` instead of `int64` internally. This removes many type conversions and makes it more readable. (made possible with `math/rand/v2`)
 - Changed logic of `OnTimer` function within `Core` to read better.
 
+## Removed
+- `init.go`, `math/rand/v2` provides a simple seed for us to use from the get-go.
+
 ## [v0.0.0-alpha.15] - 2024-02-23
 ## Added
 - `Scheduler` now has `ApplyBounds()` which must be called before `Start()`. This allows you to change the bounds after `Start()` and simplifies `Scheduler` to operate on bounds instead of jitter.
