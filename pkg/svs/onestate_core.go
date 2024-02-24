@@ -175,7 +175,7 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		lVal    uint64
-		isNewer bool
+		lNewer bool
 	)
 	c.localMtx.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
@@ -187,11 +187,11 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 			if slices.Contains(c.selfsets, p.Kstr) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
 				continue
 			}
-			isNewer = true
+			lNewer = true
 		}
 	}
 	if vector.Len() < c.local.Len() {
-		isNewer = true
+		lNewer = true
 	}
 	c.localMtx.Unlock()
 	if len(missing) != 0 {
@@ -199,5 +199,5 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 			sub <- missing
 		}
 	}
-	return isNewer
+	return lNewer
 }
