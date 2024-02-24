@@ -175,7 +175,7 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		lVal    uint64
-		lNewer bool
+		lNewer  bool
 	)
 	c.localMtx.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
