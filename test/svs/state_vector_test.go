@@ -26,6 +26,19 @@ func TestStateVectorBasics(t *testing.T) {
 	assert.Equal(t, int(3), sv.Len())
 }
 
+func TestStateVectorString(t *testing.T) {
+	sv := svs.NewStateVector()
+	n, _ := enc.NameFromStr("/node1")
+	sv.Set("/node1", n, 60, false)
+	n, _ = enc.NameFromStr("/node2")
+	sv.Set("/node2", n, 9, false)
+	n, _ = enc.NameFromStr("/node1")
+	sv.Set("/node1", n, 62, true)
+	n, _ = enc.NameFromStr("/node3")
+	sv.Set("/node3", n, 1, false)
+	assert.Equal(t, "/node3:1 /node2:9 /node1:62", sv.String())
+}
+
 func TestStateVectorLoop(t *testing.T) {
 	sv := svs.NewStateVector()
 	nsv := svs.NewStateVector()

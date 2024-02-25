@@ -13,7 +13,7 @@ type Core interface {
 	Activate(bool)
 	Shutdown()
 	Update(enc.Name, uint64)
-	StateVector() StateVector
+	StateVector() *StateVector
 	FeedInterest(ndn.Interest, enc.Wire, enc.Wire, ndn.ReplyFunc, time.Time)
 	Subscribe() chan SyncUpdate
 }

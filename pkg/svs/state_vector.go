@@ -3,34 +3,28 @@ package svs
 import (
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	om "github.com/justincpresley/ndn-sync/util/orderedmap"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
-type StateVector interface {
-	Set(string, enc.Name, uint64, bool)
-	Get(string) uint64
-	String() string
-	Len() int
-	Sum() uint64
-	Entries() *om.OrderedMap[uint64]
-	Encode(bool) enc.Wire
-}
-
-type stateVector struct {
+type StateVector struct {
 	entries *om.OrderedMap[uint64]
+	times   map[string]time.Time
+	*sync.RWMutex
 }
 
-func NewStateVector() StateVector {
-	return stateVector{entries: om.New[uint64](om.LatestEntriesFirst)}
+func NewStateVector() *StateVector {
+	return &StateVector{om.New[uint64](om.LatestEntriesFirst), make(map[string]time.Time), &sync.RWMutex{}}
 }
 
-func CopyStateVector(sv stateVector) StateVector {
-	return stateVector{entries: sv.entries.Copy()}
+func CopyStateVector(sv StateVector) *StateVector {
+	return &StateVector{sv.entries.Copy(), make(map[string]time.Time), &sync.RWMutex{}}
 }
 
-func ParseStateVector(reader enc.ParseReader, formal bool) (StateVector, error) {
+func ParseStateVector(reader enc.ParseReader, formal bool) (*StateVector, error) {
 	if formal {
 		return parseFormalStateVector(reader)
 	} else {
@@ -38,18 +32,23 @@ func ParseStateVector(reader enc.ParseReader, formal bool) (StateVector, error) 
 	}
 }
 
-func (sv stateVector) Set(dsstr string, dsname enc.Name, seqno uint64, old bool) {
+func (sv *StateVector) Update(dsstr string, dsname enc.Name, seqno uint64, old bool) {
+	sv.entries.Set(dsstr, dsname, seqno, om.MetaV{Old: old})
+	sv.times[dsstr] = time.Now()
+}
+
+func (sv *StateVector) Set(dsstr string, dsname enc.Name, seqno uint64, old bool) {
 	sv.entries.Set(dsstr, dsname, seqno, om.MetaV{Old: old})
 }
 
-func (sv stateVector) Get(dsstr string) uint64 {
+func (sv *StateVector) Get(dsstr string) uint64 {
 	if val, ok := sv.entries.Get(dsstr); ok {
 		return val
 	}
 	return 0
 }
 
-func (sv stateVector) String() string {
+func (sv *StateVector) String() string {
 	var ret strings.Builder
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		ret.WriteString(p.Kstr)
@@ -63,11 +62,7 @@ func (sv stateVector) String() string {
 	return ret.String()[:ret.Len()-1]
 }
 
-func (sv stateVector) Len() int {
-	return sv.entries.Len()
-}
-
-func (sv stateVector) Sum() uint64 {
+func (sv *StateVector) Sum() uint64 {
 	var ret uint64
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		ret += p.Val
@@ -75,11 +70,11 @@ func (sv stateVector) Sum() uint64 {
 	return ret
 }
 
-func (sv stateVector) Entries() *om.OrderedMap[uint64] {
-	return sv.entries
-}
+func (sv *StateVector) LastUpdated(dsstr string) time.Time { return sv.times[dsstr] }
+func (sv *StateVector) Len() int                           { return sv.entries.Len() }
+func (sv *StateVector) Entries() *om.OrderedMap[uint64]    { return sv.entries }
 
-func (sv stateVector) Encode(formal bool) enc.Wire {
+func (sv *StateVector) Encode(formal bool) enc.Wire {
 	if formal {
 		tl, ls := sv.formalEncodingLengths()
 		// length
@@ -113,7 +108,7 @@ func (sv stateVector) Encode(formal bool) enc.Wire {
 	}
 }
 
-func (sv stateVector) formalEncodingLengths() (int, []int) {
+func (sv *StateVector) formalEncodingLengths() (int, []int) {
 	var (
 		e, tl, nl, i int
 		ls           = make([]int, sv.entries.Len())
@@ -138,7 +133,7 @@ func (sv stateVector) formalEncodingLengths() (int, []int) {
 	return tl, ls
 }
 
-func (sv stateVector) formalEncodeInto(buf []byte, ls []int) int {
+func (sv *StateVector) formalEncodeInto(buf []byte, ls []int) int {
 	var (
 		el, off, pos, i int
 	)
@@ -162,7 +157,7 @@ func (sv stateVector) formalEncodeInto(buf []byte, ls []int) int {
 	return pos
 }
 
-func (sv stateVector) informalEncodingLength() int {
+func (sv *StateVector) informalEncodingLength() int {
 	var (
 		e, nl int
 	)
@@ -180,7 +175,7 @@ func (sv stateVector) informalEncodingLength() int {
 	return e
 }
 
-func (sv stateVector) informalEncodeInto(buf []byte) int {
+func (sv *StateVector) informalEncodeInto(buf []byte) int {
 	var pos int
 	for p := sv.entries.Front(); p != nil; p = p.Next() {
 		// source
@@ -195,7 +190,7 @@ func (sv stateVector) informalEncodeInto(buf []byte) int {
 	return pos
 }
 
-func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
+func parseFormalStateVector(reader enc.ParseReader) (*StateVector, error) {
 	if reader == nil {
 		return NewStateVector(), enc.ErrBufferOverflow
 	}
@@ -206,7 +201,7 @@ func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
 		b      enc.Buffer
 		end    int
 		err    error
-		ret    StateVector = NewStateVector()
+		ret    *StateVector = NewStateVector()
 	)
 	// vector
 	t, err = enc.ReadTLNum(reader)
@@ -277,7 +272,7 @@ func parseFormalStateVector(reader enc.ParseReader) (StateVector, error) {
 	return ret, nil
 }
 
-func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
+func parseInformalStateVector(reader enc.ParseReader) (*StateVector, error) {
 	if reader == nil {
 		return NewStateVector(), enc.ErrBufferOverflow
 	}
@@ -288,7 +283,7 @@ func parseInformalStateVector(reader enc.ParseReader) (StateVector, error) {
 		b      enc.Buffer
 		end    int
 		err    error
-		ret    StateVector = NewStateVector()
+		ret    *StateVector = NewStateVector()
 	)
 	// vector
 	t, err = enc.ReadTLNum(reader)

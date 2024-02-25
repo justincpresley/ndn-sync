@@ -2,7 +2,6 @@ package svs
 
 import (
 	"slices"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,14 +20,11 @@ type twoStateCore struct {
 	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
 	selfsets    []string
-	updateTimes map[string]time.Time
-	local       StateVector
-	record      StateVector
+	local       *StateVector
+	record      *StateVector
 	scheduler   Scheduler
 	logger      *log.Entry
 	intCfg      *ndn.InterestConfig
-	localMtx    sync.Mutex
-	recordMtx   sync.Mutex
 	formal      bool
 	effSuppress bool
 	isListening bool
@@ -37,16 +33,15 @@ type twoStateCore struct {
 
 func newTwoStateCore(app *eng.Engine, config *TwoStateCoreConfig, constants *Constants) *twoStateCore {
 	c := &twoStateCore{
-		app:         app,
-		state:       new(int32),
-		constants:   constants,
-		subs:        make([]chan SyncUpdate, 0),
-		syncPrefix:  config.SyncPrefix,
-		selfsets:    make([]string, 0),
-		updateTimes: make(map[string]time.Time),
-		local:       NewStateVector(),
-		record:      NewStateVector(),
-		logger:      log.WithField("module", "svs"),
+		app:        app,
+		state:      new(int32),
+		constants:  constants,
+		subs:       make([]chan SyncUpdate, 0),
+		syncPrefix: config.SyncPrefix,
+		selfsets:   make([]string, 0),
+		local:      NewStateVector(),
+		record:     NewStateVector(),
+		logger:     log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -119,10 +114,9 @@ func (c *twoStateCore) Update(dsname enc.Name, seqno uint64) {
 			return
 		}
 	}
-	c.localMtx.Lock()
-	c.local.Set(dsstr, dsname, seqno, false)
-	c.localMtx.Unlock()
-	c.updateTimes[dsstr] = time.Now()
+	c.local.Lock()
+	c.local.Update(dsstr, dsname, seqno, false)
+	c.local.Unlock()
 	c.scheduler.Skip()
 }
 
@@ -132,7 +126,7 @@ func (c *twoStateCore) Subscribe() chan SyncUpdate {
 	return ch
 }
 
-func (c *twoStateCore) StateVector() StateVector {
+func (c *twoStateCore) StateVector() *StateVector {
 	return c.local
 }
 
@@ -156,9 +150,9 @@ func (c *twoStateCore) onInterest(interest ndn.Interest, rawInterest enc.Wire, s
 		c.scheduler.Reset()
 	} else {
 		atomic.StoreInt32(c.state, suppressionState)
-		c.recordMtx.Lock()
+		c.record.Lock()
 		c.record = remote
-		c.recordMtx.Unlock()
+		c.record.Unlock()
 		delay := suppressionDelay(c.constants.SuppressionInterval, c.constants.SuppressionIntervalJitter)
 		if c.scheduler.TimeLeft() > delay {
 			c.scheduler.Set(delay)
@@ -180,9 +174,9 @@ func (c *twoStateCore) sendInterest() {
 	// make the interest
 	// TODO: SIGN THE INTEREST WITH AUTHENTICATABLE KEY
 	// WARNING: SHA SIGNER PROVIDES NOTHING (signature only includes the appParams) & IS ONLY PLACEHOLDER
-	c.localMtx.Lock()
+	c.local.RLock()
 	appP := c.local.Encode(c.formal)
-	c.localMtx.Unlock()
+	c.local.RUnlock()
 	wire, _, finalName, err := c.app.Spec().MakeInterest(
 		c.syncPrefix, c.intCfg, appP, sec.NewSha256IntSigner(c.app.Timer()),
 	)
@@ -200,21 +194,20 @@ func (c *twoStateCore) sendInterest() {
 	}
 }
 
-func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
+func (c *twoStateCore) mergeVectorToLocal(vector *StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		lVal    uint64
 		lNewer  bool
 	)
-	c.localMtx.Lock()
+	c.local.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
 		lVal = c.local.Get(p.Kstr)
 		if lVal < p.Val {
 			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: lVal + 1, EndSeq: p.Val})
-			c.local.Set(p.Kstr, p.Kname, p.Val, false)
-			c.updateTimes[p.Kstr] = time.Now()
+			c.local.Update(p.Kstr, p.Kname, p.Val, false)
 		} else if lVal > p.Val {
-			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
+			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.local.LastUpdated(p.Kstr)) < c.constants.SuppressionInterval {
 				continue
 			}
 			lNewer = true
@@ -224,7 +217,7 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	if vector.Len() < c.local.Len() {
 		lNewer = true
 	}
-	c.localMtx.Unlock()
+	c.local.Unlock()
 	if len(missing) != 0 {
 		for _, sub := range c.subs {
 			sub <- missing
@@ -233,20 +226,19 @@ func (c *twoStateCore) mergeVectorToLocal(vector StateVector) bool {
 	return lNewer
 }
 
-func (c *twoStateCore) recordVector(vector StateVector) {
+func (c *twoStateCore) recordVector(vector *StateVector) {
 	var missing = make(SyncUpdate, 0)
-	c.recordMtx.Lock()
+	c.record.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
 		if c.record.Get(p.Kstr) < p.Val {
 			c.record.Set(p.Kstr, p.Kname, p.Val, true)
 		}
 		if c.local.Get(p.Kstr) < p.Val {
 			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: c.local.Get(p.Kstr) + 1, EndSeq: p.Val})
-			c.local.Set(p.Kstr, p.Kname, p.Val, false)
-			c.updateTimes[p.Kstr] = time.Now()
+			c.local.Update(p.Kstr, p.Kname, p.Val, false)
 		}
 	}
-	c.recordMtx.Unlock()
+	c.record.Unlock()
 	if len(missing) != 0 {
 		for _, sub := range c.subs {
 			sub <- missing
@@ -255,16 +247,16 @@ func (c *twoStateCore) recordVector(vector StateVector) {
 }
 
 func (c *twoStateCore) isInterestNeeded() bool {
-	c.localMtx.Lock()
-	c.recordMtx.Lock()
-	defer c.localMtx.Unlock()
-	defer c.recordMtx.Unlock()
+	c.local.RLock()
+	c.record.RLock()
+	defer c.local.RUnlock()
+	defer c.record.RUnlock()
 	if c.record.Len() < c.local.Len() {
 		return true
 	}
 	for p := c.record.Entries().Front(); p != nil; p = p.Next() {
 		if c.local.Get(p.Kstr) > p.Val {
-			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
+			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.local.LastUpdated(p.Kstr)) < c.constants.SuppressionInterval {
 				continue
 			}
 			return true

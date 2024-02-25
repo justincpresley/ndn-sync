@@ -36,7 +36,7 @@ type scheduler struct {
 	maxInterval time.Duration
 	cycleLength time.Duration
 	startTime   time.Time
-	mtx         sync.Mutex
+	mtx         sync.RWMutex
 	done        chan struct{}
 }
 
@@ -68,8 +68,8 @@ func (s *scheduler) Reset()              { s.actions <- action{typ: actionReset}
 func (s *scheduler) Set(v time.Duration) { s.actions <- action{typ: actionSet, val: v} }
 
 func (s *scheduler) TimeLeft() time.Duration {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 	return time.Duration(s.cycleLength) - time.Since(s.startTime)
 }
 

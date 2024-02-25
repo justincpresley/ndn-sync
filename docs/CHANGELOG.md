@@ -5,9 +5,17 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+## Added
+- `RWMutex` is embedded into `StateVector`.
+- `Update()` for `StateVector` that functions the same as `Set()` but updates the time for that entry. `LastUpdated()` pulls the time for a certain entry.
+
 ## Changed
 - `Scheduler` operates entirely with `time.Duration` instead of `int64` internally. This removes many type conversions and makes it more readable. (made possible with `math/rand/v2`)
+- `Scheduler` now has `RWMutex` instead of `Mutex`. This will not affect it's usage in our case now but could in other use cases.
 - Changed logic of `OnTimer` function within `Core` to read better.
+- De-interfaced `StateVector`.
+- `Core` now uses `StateVector`s additional functionality (mutexes and times). This unclutters the `Core`.
+- Updated all dependencies.
 
 ## Removed
 - `init.go`, `math/rand/v2` provides a simple seed for us to use from the get-go.

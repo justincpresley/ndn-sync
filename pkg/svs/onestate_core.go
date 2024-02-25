@@ -2,7 +2,6 @@ package svs
 
 import (
 	"slices"
-	"sync"
 	"time"
 
 	log "github.com/apex/log"
@@ -19,12 +18,10 @@ type oneStateCore struct {
 	subs        []chan SyncUpdate
 	syncPrefix  enc.Name
 	selfsets    []string
-	updateTimes map[string]time.Time
-	local       StateVector
+	local       *StateVector
 	scheduler   Scheduler
 	logger      *log.Entry
 	intCfg      *ndn.InterestConfig
-	localMtx    sync.Mutex
 	formal      bool
 	isListening bool
 	isActive    bool
@@ -32,14 +29,13 @@ type oneStateCore struct {
 
 func newOneStateCore(app *eng.Engine, config *OneStateCoreConfig, constants *Constants) *oneStateCore {
 	c := &oneStateCore{
-		app:         app,
-		constants:   constants,
-		subs:        make([]chan SyncUpdate, 0),
-		syncPrefix:  config.SyncPrefix,
-		selfsets:    make([]string, 0),
-		updateTimes: make(map[string]time.Time),
-		local:       NewStateVector(),
-		logger:      log.WithField("module", "svs"),
+		app:        app,
+		constants:  constants,
+		subs:       make([]chan SyncUpdate, 0),
+		syncPrefix: config.SyncPrefix,
+		selfsets:   make([]string, 0),
+		local:      NewStateVector(),
+		logger:     log.WithField("module", "svs"),
 		intCfg: &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -111,10 +107,9 @@ func (c *oneStateCore) Update(dsname enc.Name, seqno uint64) {
 			return
 		}
 	}
-	c.localMtx.Lock()
-	c.local.Set(dsstr, dsname, seqno, false)
-	c.localMtx.Unlock()
-	c.updateTimes[dsstr] = time.Now()
+	c.local.Lock()
+	c.local.Update(dsstr, dsname, seqno, false)
+	c.local.Unlock()
 	c.scheduler.Skip()
 }
 
@@ -124,7 +119,7 @@ func (c *oneStateCore) Subscribe() chan SyncUpdate {
 	return ch
 }
 
-func (c *oneStateCore) StateVector() StateVector {
+func (c *oneStateCore) StateVector() *StateVector {
 	return c.local
 }
 
@@ -151,9 +146,9 @@ func (c *oneStateCore) sendInterest() {
 	// make the interest
 	// TODO: SIGN THE INTEREST WITH AUTHENTICATABLE KEY
 	// WARNING: SHA SIGNER PROVIDES NOTHING (signature only includes the appParams) & IS ONLY PLACEHOLDER
-	c.localMtx.Lock()
+	c.local.RLock()
 	appP := c.local.Encode(c.formal)
-	c.localMtx.Unlock()
+	c.local.RUnlock()
 	wire, _, finalName, err := c.app.Spec().MakeInterest(
 		c.syncPrefix, c.intCfg, appP, sec.NewSha256IntSigner(c.app.Timer()),
 	)
@@ -171,20 +166,20 @@ func (c *oneStateCore) sendInterest() {
 	}
 }
 
-func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
+func (c *oneStateCore) mergeVectorToLocal(vector *StateVector) bool {
 	var (
 		missing = make(SyncUpdate, 0)
 		lVal    uint64
 		lNewer  bool
 	)
-	c.localMtx.Lock()
+	c.local.Lock()
 	for p := vector.Entries().Back(); p != nil; p = p.Prev() {
 		lVal = c.local.Get(p.Kstr)
 		if lVal < p.Val {
 			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: lVal + 1, EndSeq: p.Val})
 			c.local.Set(p.Kstr, p.Kname, p.Val, false)
 		} else if lVal > p.Val {
-			if slices.Contains(c.selfsets, p.Kstr) && time.Since(c.updateTimes[p.Kstr]) < c.constants.SuppressionInterval {
+			if slices.Contains(c.selfsets, p.Kstr) && time.Since(c.local.LastUpdated(p.Kstr)) < c.constants.SuppressionInterval {
 				continue
 			}
 			lNewer = true
@@ -193,7 +188,7 @@ func (c *oneStateCore) mergeVectorToLocal(vector StateVector) bool {
 	if vector.Len() < c.local.Len() {
 		lNewer = true
 	}
-	c.localMtx.Unlock()
+	c.local.Unlock()
 	if len(missing) != 0 {
 		for _, sub := range c.subs {
 			sub <- missing
