@@ -15,7 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Changed logic of `OnTimer` function within `Core` to read better.
 - De-interfaced `StateVector`.
 - `Core` now uses `StateVector`s additional functionality (mutexes and times). This unclutters the `Core`.
+- `OrderedMap` is now named `NameMap`, modernized different aspects of it. The internal `list` used is now fully hidden from external API.
 - Updated all dependencies.
+
+## Fixed
+- Copying a `NameMap` (previously `OrderedMap`) now correctly copies everything.
 
 ## Removed
 - `init.go`, `math/rand/v2` provides a simple seed for us to use from the get-go.

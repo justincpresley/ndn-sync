@@ -29,7 +29,6 @@ type TwoStateCoreConfig struct {
 	EfficientSuppression bool
 }
 
-// TODO: change after threestatecore is added
 func NewCore(app *eng.Engine, config interface{}, constants *Constants) Core {
 	switch config.(type) {
 	case *OneStateCoreConfig:

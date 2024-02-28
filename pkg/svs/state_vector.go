@@ -6,18 +6,18 @@ import (
 	"sync"
 	"time"
 
-	om "github.com/justincpresley/ndn-sync/util/orderedmap"
+	nm "github.com/justincpresley/ndn-sync/util/namemap"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 type StateVector struct {
-	entries *om.OrderedMap[uint64]
+	entries *nm.NameMap[uint64]
 	times   map[string]time.Time
 	*sync.RWMutex
 }
 
 func NewStateVector() *StateVector {
-	return &StateVector{om.New[uint64](om.LatestEntriesFirst), make(map[string]time.Time), &sync.RWMutex{}}
+	return &StateVector{nm.New[uint64](nm.LatestEntriesFirst), make(map[string]time.Time), &sync.RWMutex{}}
 }
 
 func CopyStateVector(sv StateVector) *StateVector {
@@ -33,12 +33,12 @@ func ParseStateVector(reader enc.ParseReader, formal bool) (*StateVector, error)
 }
 
 func (sv *StateVector) Update(dsstr string, dsname enc.Name, seqno uint64, old bool) {
-	sv.entries.Set(dsstr, dsname, seqno, om.MetaV{Old: old})
+	sv.entries.Set(dsstr, dsname, seqno, nm.MetaV{Old: old})
 	sv.times[dsstr] = time.Now()
 }
 
 func (sv *StateVector) Set(dsstr string, dsname enc.Name, seqno uint64, old bool) {
-	sv.entries.Set(dsstr, dsname, seqno, om.MetaV{Old: old})
+	sv.entries.Set(dsstr, dsname, seqno, nm.MetaV{Old: old})
 }
 
 func (sv *StateVector) Get(dsstr string) uint64 {
@@ -72,7 +72,7 @@ func (sv *StateVector) Sum() uint64 {
 
 func (sv *StateVector) LastUpdated(dsstr string) time.Time { return sv.times[dsstr] }
 func (sv *StateVector) Len() int                           { return sv.entries.Len() }
-func (sv *StateVector) Entries() *om.OrderedMap[uint64]    { return sv.entries }
+func (sv *StateVector) Entries() *nm.NameMap[uint64]    { return sv.entries }
 
 func (sv *StateVector) Encode(formal bool) enc.Wire {
 	if formal {

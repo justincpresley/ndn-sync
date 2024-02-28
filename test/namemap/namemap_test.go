@@ -4,19 +4,19 @@ import (
 	"strconv"
 	"testing"
 
-	om "github.com/justincpresley/ndn-sync/util/orderedmap"
+	nm "github.com/justincpresley/ndn-sync/util/namemap"
 	assert "github.com/stretchr/testify/assert"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 func TestBasicFeatures(t *testing.T) {
 	n := 100
-	m := om.New[int](om.LatestEntriesFirst)
+	m := nm.New[int](nm.LatestEntriesFirst)
 
 	for i := range n {
 		assert.Equal(t, i, m.Len())
 		n, _ := enc.NameFromStr(strconv.Itoa(i))
-		present := m.Set(strconv.Itoa(i), n, 2*i, om.MetaV{Old: true})
+		present := m.Set(strconv.Itoa(i), n, 2*i, nm.MetaV{Old: true})
 		assert.Equal(t, i+1, m.Len())
 		assert.False(t, present)
 	}
@@ -34,18 +34,46 @@ func TestBasicFeatures(t *testing.T) {
 	}
 }
 
+func TestCopy(t *testing.T) {
+	n := 100
+	m := nm.New[int](nm.LatestEntriesFirst)
+
+	for i := range n {
+		assert.Equal(t, i, m.Len())
+		n, _ := enc.NameFromStr(strconv.Itoa(i))
+		present := m.Set(strconv.Itoa(i), n, 2*i, nm.MetaV{Old: true})
+		assert.Equal(t, i+1, m.Len())
+		assert.False(t, present)
+	}
+
+	c := m.Copy()
+
+	for i := range n {
+		value, present := c.Get(strconv.Itoa(i))
+		assert.Equal(t, 2*i, value)
+		assert.True(t, present)
+	}
+
+	for i := range n {
+		e := c.GetElement(strconv.Itoa(i))
+		assert.NotNil(t, e)
+		assert.Equal(t, 2*i, e.Val)
+	}
+}
+
+
 func TestUpdatingDoesntChangePairsOrder(t *testing.T) {
-	m := om.New[any](om.LatestEntriesFirst)
+	m := nm.New[any](nm.LatestEntriesFirst)
 	n, _ := enc.NameFromStr("foo")
-	m.Set("foo", n, "bar", om.MetaV{Old: true})
+	m.Set("foo", n, "bar", nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("wk")
-	m.Set("wk", n, 28, om.MetaV{Old: true})
+	m.Set("wk", n, 28, nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("po")
-	m.Set("po", n, 100, om.MetaV{Old: true})
+	m.Set("po", n, 100, nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("bar")
-	m.Set("bar", n, "baz", om.MetaV{Old: true})
+	m.Set("bar", n, "baz", nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("po")
-	present := m.Set("po", n, 102, om.MetaV{Old: true})
+	present := m.Set("po", n, 102, nm.MetaV{Old: true})
 	assert.True(t, present)
 
 	assertOrderedPairsEqual(t, m,
@@ -54,22 +82,22 @@ func TestUpdatingDoesntChangePairsOrder(t *testing.T) {
 }
 
 func TestDifferentOrderings(t *testing.T) {
-	m := om.New[any](om.Canonical)
+	m := nm.New[any](nm.Canonical)
 	s := "oooo"
 	n, _ := enc.NameFromStr(s)
-	m.Set(s, n, "bar", om.MetaV{})
+	m.Set(s, n, "bar", nm.MetaV{})
 	s = "ooooo"
 	n, _ = enc.NameFromStr(s)
-	m.Set(s, n, 28, om.MetaV{})
+	m.Set(s, n, 28, nm.MetaV{})
 	s = "ooo"
 	n, _ = enc.NameFromStr(s)
-	m.Set(s, n, 100, om.MetaV{})
+	m.Set(s, n, 100, nm.MetaV{})
 	s = "oo"
 	n, _ = enc.NameFromStr(s)
-	m.Set(s, n, "baz", om.MetaV{})
+	m.Set(s, n, "baz", nm.MetaV{})
 	s = "ooooo"
 	n, _ = enc.NameFromStr(s)
-	present := m.Set(s, n, 102, om.MetaV{})
+	present := m.Set(s, n, 102, nm.MetaV{})
 	assert.True(t, present)
 
 	assertOrderedPairsEqual(t, m,
@@ -78,21 +106,21 @@ func TestDifferentOrderings(t *testing.T) {
 }
 
 func TestDeletingAndReinsertingChangesPairsOrder(t *testing.T) {
-	m := om.New[any](om.LatestEntriesFirst)
+	m := nm.New[any](nm.LatestEntriesFirst)
 	n, _ := enc.NameFromStr("foo")
-	m.Set("foo", n, "bar", om.MetaV{Old: true})
+	m.Set("foo", n, "bar", nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("wk")
-	m.Set("wk", n, 28, om.MetaV{Old: true})
+	m.Set("wk", n, 28, nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("po")
-	m.Set("po", n, 100, om.MetaV{Old: true})
+	m.Set("po", n, 100, nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("bar")
-	m.Set("bar", n, "baz", om.MetaV{Old: true})
+	m.Set("bar", n, "baz", nm.MetaV{Old: true})
 
 	present := m.Remove("po")
 	assert.True(t, present)
 
 	n, _ = enc.NameFromStr("po")
-	present = m.Set("po", n, 100, om.MetaV{Old: true})
+	present = m.Set("po", n, 100, nm.MetaV{Old: true})
 	assert.False(t, present)
 
 	assertOrderedPairsEqual(t, m,
@@ -101,7 +129,7 @@ func TestDeletingAndReinsertingChangesPairsOrder(t *testing.T) {
 }
 
 func TestEmptyMapOperations(t *testing.T) {
-	m := om.New[any](om.LatestEntriesFirst)
+	m := nm.New[any](nm.LatestEntriesFirst)
 
 	val, present := m.Get("foo")
 	assert.Nil(t, val)
@@ -120,11 +148,11 @@ type sampleStruct struct {
 }
 
 func TestPackUnpackStructs(t *testing.T) {
-	m := om.New[sampleStruct](om.LatestEntriesFirst)
+	m := nm.New[sampleStruct](nm.LatestEntriesFirst)
 	n, _ := enc.NameFromStr("foo")
-	m.Set("foo", n, sampleStruct{"foo!"}, om.MetaV{Old: true})
+	m.Set("foo", n, sampleStruct{"foo!"}, nm.MetaV{Old: true})
 	n, _ = enc.NameFromStr("bar")
-	m.Set("bar", n, sampleStruct{"bar!"}, om.MetaV{Old: true})
+	m.Set("bar", n, sampleStruct{"bar!"}, nm.MetaV{Old: true})
 
 	value, present := m.Get("foo")
 	assert.True(t, present)
@@ -133,7 +161,7 @@ func TestPackUnpackStructs(t *testing.T) {
 	}
 
 	n, _ = enc.NameFromStr("bar")
-	present = m.Set("bar", n, sampleStruct{"baz!"}, om.MetaV{Old: true})
+	present = m.Set("bar", n, sampleStruct{"baz!"}, nm.MetaV{Old: true})
 	assert.True(t, present)
 
 	value, present = m.Get("bar")
@@ -143,12 +171,12 @@ func TestPackUnpackStructs(t *testing.T) {
 	}
 }
 
-func assertOrderedPairsEqual[V any](t *testing.T, m *om.OrderedMap[V], expectedKeys []string, expectedValues []V) {
+func assertOrderedPairsEqual[V any](t *testing.T, m *nm.NameMap[V], expectedKeys []string, expectedValues []V) {
 	assertOrderedPairsEqualFromBack(t, m, expectedKeys, expectedValues)
 	assertOrderedPairsEqualFromFront(t, m, expectedKeys, expectedValues)
 }
 
-func assertOrderedPairsEqualFromBack[V any](t *testing.T, m *om.OrderedMap[V], expectedKeys []string, expectedValues []V) {
+func assertOrderedPairsEqualFromBack[V any](t *testing.T, m *nm.NameMap[V], expectedKeys []string, expectedValues []V) {
 	if assert.Equal(t, len(expectedKeys), len(expectedValues)) && assert.Equal(t, len(expectedKeys), m.Len()) {
 		i := m.Len() - 1
 		for e := m.Back(); e != nil; e = e.Prev() {
@@ -159,7 +187,7 @@ func assertOrderedPairsEqualFromBack[V any](t *testing.T, m *om.OrderedMap[V], e
 	}
 }
 
-func assertOrderedPairsEqualFromFront[V any](t *testing.T, m *om.OrderedMap[V], expectedKeys []string, expectedValues []V) {
+func assertOrderedPairsEqualFromFront[V any](t *testing.T, m *nm.NameMap[V], expectedKeys []string, expectedValues []V) {
 	if assert.Equal(t, len(expectedKeys), len(expectedValues)) && assert.Equal(t, len(expectedKeys), m.Len()) {
 		i := m.Len() - 1
 		for e := m.Back(); e != nil; e = e.Prev() {

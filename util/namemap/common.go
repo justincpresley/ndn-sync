@@ -1,4 +1,4 @@
-package orderedmap
+package namemap
 
 type Ordering int
 
