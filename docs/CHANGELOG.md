@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 ## Added
 - `RWMutex` is embedded into `StateVector`.
-- `Update()` for `StateVector` that functions the same as `Set()` but updates the time for that entry. `LastUpdated()` pulls the time for a certain entry.
+- `Update()` for `StateVector` that updates the time for an entry. `LastUpdated()` pulls the time for a certain entry.
 
 ## Changed
 - `Scheduler` operates entirely with `time.Duration` instead of `int64` internally. This removes many type conversions and makes it more readable. (made possible with `math/rand/v2`)

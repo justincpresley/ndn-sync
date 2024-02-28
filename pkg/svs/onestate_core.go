@@ -108,7 +108,8 @@ func (c *oneStateCore) Update(dsname enc.Name, seqno uint64) {
 		}
 	}
 	c.local.Lock()
-	c.local.Update(dsstr, dsname, seqno, false)
+	c.local.Set(dsstr, dsname, seqno, false)
+	c.local.Update(dsstr)
 	c.local.Unlock()
 	c.scheduler.Skip()
 }

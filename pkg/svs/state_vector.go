@@ -32,11 +32,6 @@ func ParseStateVector(reader enc.ParseReader, formal bool) (*StateVector, error)
 	}
 }
 
-func (sv *StateVector) Update(dsstr string, dsname enc.Name, seqno uint64, old bool) {
-	sv.entries.Set(dsstr, dsname, seqno, nm.MetaV{Old: old})
-	sv.times[dsstr] = time.Now()
-}
-
 func (sv *StateVector) Set(dsstr string, dsname enc.Name, seqno uint64, old bool) {
 	sv.entries.Set(dsstr, dsname, seqno, nm.MetaV{Old: old})
 }
@@ -70,6 +65,7 @@ func (sv *StateVector) Sum() uint64 {
 	return ret
 }
 
+func (sv *StateVector) Update(dsstr string)                { sv.times[dsstr] = time.Now() }
 func (sv *StateVector) LastUpdated(dsstr string) time.Time { return sv.times[dsstr] }
 func (sv *StateVector) Len() int                           { return sv.entries.Len() }
 func (sv *StateVector) Entries() *nm.NameMap[uint64]       { return sv.entries }

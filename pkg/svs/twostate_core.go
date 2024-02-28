@@ -115,7 +115,8 @@ func (c *twoStateCore) Update(dsname enc.Name, seqno uint64) {
 		}
 	}
 	c.local.Lock()
-	c.local.Update(dsstr, dsname, seqno, false)
+	c.local.Set(dsstr, dsname, seqno, false)
+	c.local.Update(dsstr)
 	c.local.Unlock()
 	c.scheduler.Skip()
 }
@@ -205,7 +206,8 @@ func (c *twoStateCore) mergeVectorToLocal(vector *StateVector) bool {
 		lVal = c.local.Get(p.Kstr)
 		if lVal < p.Val {
 			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: lVal + 1, EndSeq: p.Val})
-			c.local.Update(p.Kstr, p.Kname, p.Val, false)
+			c.local.Set(p.Kstr, p.Kname, p.Val, false)
+			c.local.Update(p.Kstr)
 		} else if lVal > p.Val {
 			if (c.effSuppress || slices.Contains(c.selfsets, p.Kstr)) && time.Since(c.local.LastUpdated(p.Kstr)) < c.constants.SuppressionInterval {
 				continue
@@ -235,7 +237,8 @@ func (c *twoStateCore) recordVector(vector *StateVector) {
 		}
 		if c.local.Get(p.Kstr) < p.Val {
 			missing = append(missing, MissingData{Dataset: p.Kname, StartSeq: c.local.Get(p.Kstr) + 1, EndSeq: p.Val})
-			c.local.Update(p.Kstr, p.Kname, p.Val, false)
+			c.local.Set(p.Kstr, p.Kname, p.Val, false)
+			c.local.Update(p.Kstr)
 		}
 	}
 	c.record.Unlock()
