@@ -5,6 +5,8 @@ All notable changes to syncs will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Go's Versioning](https://go.dev/doc/modules/release-workflow). Moreover, ***ndn-sync*** utilizes 3 version identifiers: `alpha`, `beta`, and `mark`.
 
 ## [Unreleased]
+
+## [v0.0.0-alpha.16] - 2024-02-27
 ## Added
 - `RWMutex` is embedded into `StateVector`.
 - `Update()` for `StateVector` that updates the time for an entry. `LastUpdated()` pulls the time for a certain entry.
@@ -189,7 +191,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 - SVS does is not secure due to having lack signing / validating capabilities (waiting on go-ndn)
 
-[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.15...HEAD
+[Unreleased]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.16...HEAD
+[v0.0.0-alpha.16]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.15...v0.0.0-alpha.16
 [v0.0.0-alpha.15]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.14...v0.0.0-alpha.15
 [v0.0.0-alpha.14]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.13...v0.0.0-alpha.14
 [v0.0.0-alpha.13]: https://github.com/justincpresley/ndn-sync/compare/v0.0.0-alpha.12...v0.0.0-alpha.13
