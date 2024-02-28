@@ -72,7 +72,7 @@ func (sv *StateVector) Sum() uint64 {
 
 func (sv *StateVector) LastUpdated(dsstr string) time.Time { return sv.times[dsstr] }
 func (sv *StateVector) Len() int                           { return sv.entries.Len() }
-func (sv *StateVector) Entries() *nm.NameMap[uint64]    { return sv.entries }
+func (sv *StateVector) Entries() *nm.NameMap[uint64]       { return sv.entries }
 
 func (sv *StateVector) Encode(formal bool) enc.Wire {
 	if formal {

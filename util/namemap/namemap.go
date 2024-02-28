@@ -36,7 +36,7 @@ func (m *NameMap[V]) Copy() *NameMap[V] {
 }
 
 func (m *NameMap[V]) Get(kstr string) (V, bool) {
-	e, ok := m.kv[kstr];
+	e, ok := m.kv[kstr]
 	if !ok {
 		return *new(V), ok
 	}

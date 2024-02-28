@@ -61,7 +61,6 @@ func TestCopy(t *testing.T) {
 	}
 }
 
-
 func TestUpdatingDoesntChangePairsOrder(t *testing.T) {
 	m := nm.New[any](nm.LatestEntriesFirst)
 	n, _ := enc.NameFromStr("foo")
